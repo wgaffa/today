@@ -19,25 +19,19 @@ fn prompt_task() -> Result<Task, Box<dyn Error>> {
 
     let due = prompt_due()?;
 
-    let task_date = if let Some(date) = due {
+    let task = Task::new(name);
+    let task = if let Some(date) = due {
         let time = prompt_time()?;
         if let Some(local_time) = time {
-            Some(date.and_time(local_time))
+            task.with_date_time(Utc.from_local_datetime(&date.and_time(local_time)).unwrap())
         } else {
-            Some(date.and_hms(0, 0, 0))
+            task.with_date(Utc.from_local_date(&date).unwrap())
         }
     } else {
-        None
+        task
     };
 
-    if let Some(due) = task_date {
-        Ok(
-            Task::new(name)
-                .with_date_time(Utc.from_local_datetime(&due).unwrap())
-        )
-    } else {
-        Ok(Task::new(name))
-    }
+    Ok(task)
 }
 
 fn prompt_time() -> InquireResult<Option<NaiveTime>> {
