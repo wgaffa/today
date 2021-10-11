@@ -7,6 +7,7 @@ edition = "2018"
 
 [dependencies]
 chrono = "0.4.19"
+inquire = { version = "0.2.1", default_features = false, features = ["date", "termion", "builtin_validators"] }
 
 [dev-dependencies]
 test-case = "1.2.0"
