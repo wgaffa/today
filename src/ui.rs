@@ -1,12 +1,40 @@
-use std::error::Error;
+use std::{error::Error, fmt::Display};
 use chrono::prelude::*;
-use inquire::{CustomType, DateSelect, Text};
-use inquire::formatter::StringFormatter;
-use inquire::ui::{RenderConfig, Styled};
-use inquire::validator::StringValidator;
-use inquire::error::{InquireError, InquireResult};
+use inquire::{
+    CustomType, DateSelect, Select, Text,
+    formatter::StringFormatter,
+    ui::{RenderConfig, Styled},
+    validator::StringValidator,
+    error::{InquireError, InquireResult},
+};
 
 use today::Task;
+
+#[derive(Debug)]
+pub enum MenuOption {
+    Add,
+    Quit,
+}
+
+impl Display for MenuOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            MenuOption::Add => write!(f, "Add"),
+            MenuOption::Quit => write!(f, "Quit"),
+        }
+    }
+}
+
+pub fn menu() -> Result<MenuOption, Box<dyn Error>> {
+    let options = vec![MenuOption::Add, MenuOption::Quit];
+    let selected = Select::new("What do you wish to do?", options)
+        .with_vim_mode(true)
+        .prompt()?;
+
+    println!("{:?}", selected);
+
+    Ok(selected)
+}
 
 pub fn prompt_task() -> Result<Task, Box<dyn Error>> {
     let name = prompt_name()?;
