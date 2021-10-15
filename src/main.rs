@@ -1,6 +1,6 @@
 use std::{collections::HashMap, error::Error};
 
-use today::{Task, task::TaskManager};
+use today::TaskManager;
 
 mod ui;
 
@@ -8,7 +8,7 @@ fn main() -> Result<(), Box<dyn Error>>{
     let mut tasks = TaskManager::new();
     let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> Result<(), Box<dyn Error>>> = HashMap::new();
     dispatcher.insert(ui::MenuOption::Add, |tasks| {
-        let task = add_task()?;
+        let task = ui::prompt_task()?;
         tasks.add(task);
         Ok(())
     });
@@ -29,11 +29,4 @@ fn main() -> Result<(), Box<dyn Error>>{
     }
 
     Ok(())
-}
-
-fn add_task() -> Result<Task, Box<dyn Error>> {
-    let task = ui::prompt_task()?;
-    println!("{:?}", task);
-
-    Ok(task)
 }
