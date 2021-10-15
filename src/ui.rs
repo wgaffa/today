@@ -10,9 +10,10 @@ use inquire::{
 
 use today::Task;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub enum MenuOption {
     Add,
+    List,
     Quit,
 }
 
@@ -20,13 +21,14 @@ impl Display for MenuOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match *self {
             MenuOption::Add => write!(f, "Add"),
+            MenuOption::List => write!(f, "List"),
             MenuOption::Quit => write!(f, "Quit"),
         }
     }
 }
 
 pub fn menu() -> Result<MenuOption, Box<dyn Error>> {
-    let options = vec![MenuOption::Add, MenuOption::Quit];
+    let options = vec![MenuOption::Add, MenuOption::List, MenuOption::Quit];
     let selected = Select::new("What do you wish to do?", options)
         .with_vim_mode(true)
         .prompt()?;
