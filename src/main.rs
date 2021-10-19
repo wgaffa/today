@@ -1,38 +1,36 @@
 use std::{
     collections::HashMap,
-    env::{self, VarError},
-    error::Error,
+    env,
     fs,
     io::{self, ErrorKind},
     path::{Path, PathBuf}
 };
+use anyhow::{anyhow, Error};
 
 use today::TaskManager;
 
 mod ui;
 
-fn main() -> Result<(), Box<dyn Error>>{
+fn main() -> anyhow::Result<()>{
     let conf_path = env::var("TODAY_CONFIG_PATH")
+        .map_err(|e| anyhow::Error::new(e))
         .and_then(|x| {
             match fs::metadata(&x) {
                 Ok(_meta) => Ok(x),
-                Err(_) => Err(VarError::NotPresent),
+                Err(e) => Err(Error::new(e)),
             }
         })
-        .or_else(|_error| {
-            if let Some(path) = config_path() {
-                match setup_config(&path) {
-                    Ok(()) => Ok(path.to_str().unwrap().to_owned()),
-                    Err(e) => Err(e),
-                }
-            } else {
-                todo!()
+        .or_else(|error| {
+            let path = config_path().ok_or(anyhow!("Failed to get default XDG config path"))?;
+            match setup_config(&path) {
+                Ok(()) => Ok(path.to_str().unwrap().to_owned()),
+                Err(e) => Err(Error::new(e)),
             }
         })?;
     println!("{:?}", conf_path);
 
     let mut tasks = TaskManager::new();
-    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> Result<(), Box<dyn Error>>> = HashMap::new();
+    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> = HashMap::new();
     dispatcher.insert(ui::MenuOption::Add, |tasks| {
         let task = ui::prompt_task()?;
         tasks.add(task);

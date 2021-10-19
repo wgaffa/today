@@ -1,4 +1,4 @@
-use std::{error::Error, fmt::Display};
+use std::fmt::Display;
 use chrono::prelude::*;
 use inquire::{
     CustomType, DateSelect, Select, Text,
@@ -7,6 +7,7 @@ use inquire::{
     validator::StringValidator,
     error::{InquireError, InquireResult},
 };
+use anyhow::Error;
 
 use today::Task;
 
@@ -27,7 +28,7 @@ impl Display for MenuOption {
     }
 }
 
-pub fn menu() -> Result<MenuOption, Box<dyn Error>> {
+pub fn menu() -> anyhow::Result<MenuOption> {
     let options = vec![MenuOption::Add, MenuOption::List, MenuOption::Quit];
     let selected = Select::new("What do you wish to do?", options)
         .with_vim_mode(true)
@@ -38,7 +39,7 @@ pub fn menu() -> Result<MenuOption, Box<dyn Error>> {
     Ok(selected)
 }
 
-pub fn prompt_task() -> Result<Task, Box<dyn Error>> {
+pub fn prompt_task() -> anyhow::Result<Task> {
     let name = prompt_name()?;
 
     let due = prompt_due()?;
@@ -92,7 +93,7 @@ fn prompt_due() -> InquireResult<Option<NaiveDate>> {
         .prompt_skippable()
 }
 
-fn prompt_name() -> Result<String, Box<dyn Error>> {
+fn prompt_name() -> anyhow::Result<String> {
     let name_validator: StringValidator = &|input: &str| {
         if input.chars().any(|x| !x.is_whitespace()) {
             Ok(())
@@ -112,7 +113,7 @@ fn prompt_name() -> Result<String, Box<dyn Error>> {
         match name {
             Ok(n) => return Ok(name_formatter(&n)),
             Err(InquireError::OperationCanceled) => {},
-            Err(e) => return Err(Box::new(e)),
+            Err(e) => return Err(Error::new(e)),
         }
     };
 }
