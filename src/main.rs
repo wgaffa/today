@@ -3,31 +3,57 @@ use std::{
     env,
     fs,
     io::{self, ErrorKind},
-    path::{Path, PathBuf}
+    path::{Path, PathBuf},
 };
 use anyhow::{anyhow, Error};
 
-use today::TaskManager;
+use today::{TaskManager, partial_config::{Last, Semigroup, Monoid}};
+use today_derive::*;
 
 mod ui;
 
-fn main() -> anyhow::Result<()>{
-    let conf_path = env::var("TODAY_CONFIG_PATH")
+#[derive(Debug, Semigroup, Monoid, Default)]
+struct AppPaths {
+    config: Last<PathBuf>,
+    data: Last<PathBuf>,
+}
+
+fn read_env() -> anyhow::Result<AppPaths> {
+    env::var("TODAY_CONFIG_PATH")
         .map_err(|e| anyhow::Error::new(e))
         .and_then(|x| {
             match fs::metadata(&x) {
-                Ok(_meta) => Ok(x),
+                Ok(_meta) => Ok(
+                    AppPaths {
+                        config: PathBuf::from(x).into(),
+                        ..Default::default()
+                    }
+                ),
                 Err(e) => Err(Error::new(e)),
             }
         })
-        .or_else(|error| {
-            let path = config_path().ok_or(anyhow!("Failed to get default XDG config path"))?;
-            match setup_config(&path) {
-                Ok(()) => Ok(path.to_str().unwrap().to_owned()),
-                Err(e) => Err(Error::new(e)),
+}
+
+fn read_xdg() -> anyhow::Result<AppPaths> {
+    let path = config_path().ok_or(anyhow!("Failed to get default XDG config path"))?;
+    match setup_config(&path) {
+        Ok(()) => Ok(
+            AppPaths {
+                config: path.into(),
+                ..Default::default()
             }
-        })?;
-    println!("{:?}", conf_path);
+        ),
+        Err(e) => Err(Error::new(e)),
+    }
+}
+
+fn main() -> anyhow::Result<()> {
+    let confs = vec![read_env(), read_xdg()];
+    let config = confs.into_iter().fold(
+        AppPaths::default(),
+        |acc, c| acc.combine(c.unwrap_or_default())
+        );
+    println!("{:?}", config);
 
     let mut tasks = TaskManager::new();
     let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> = HashMap::new();
