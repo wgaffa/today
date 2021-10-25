@@ -97,6 +97,21 @@ impl_semigroup_with_addition!(
 impl_monoid_for_default!(
     usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
 
+#[macro_export]
+macro_rules! combine {
+    ( $init:expr => $($x:expr;)+ ) => {
+        $init$(
+            .combine($x.into())
+        )*
+    };
+
+    ( $init:expr => $($x:expr);+ ) => {
+        $init$(
+            .combine($x.into())
+        )*
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -117,5 +132,14 @@ mod tests {
         let sum = nums.into_iter().fold(Sum::empty(), |acc, x| acc.combine(Sum::from(x)));
 
         assert_eq!(sum, 86);
+    }
+
+    #[test]
+    fn combine_macro() {
+        let x = combine!{
+            Last::from(53) => None; 42; {let b = None; b};
+        };
+
+        assert_eq!(x.0, Some(42));
     }
 }
