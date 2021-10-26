@@ -7,7 +7,7 @@ use std::{
 };
 use anyhow::{anyhow, Error};
 
-use today::{TaskManager, partial_config::{Last, Semigroup, Monoid}};
+use today::{TaskManager, combine, partial_config::{Last, Semigroup, Monoid}};
 use today_derive::*;
 
 mod ui;
@@ -48,11 +48,11 @@ fn read_xdg() -> anyhow::Result<AppPaths> {
 }
 
 fn main() -> anyhow::Result<()> {
-    let confs = vec![read_env(), read_xdg()];
-    let config = confs.into_iter().fold(
-        AppPaths::default(),
-        |acc, c| acc.combine(c.unwrap_or_default())
-        );
+    let config = combine!{
+        AppPaths::default() =>
+            read_env().unwrap_or_default(),
+            read_xdg().unwrap_or_default(),
+    };
     println!("{:?}", config);
 
     let mut tasks = TaskManager::new();

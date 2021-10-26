@@ -99,13 +99,13 @@ impl_monoid_for_default!(
 
 #[macro_export]
 macro_rules! combine {
-    ( $init:expr => $($x:expr;)+ ) => {
+    ( $init:expr => $($x:expr,)+ ) => {
         $init$(
             .combine($x.into())
         )*
     };
 
-    ( $init:expr => $($x:expr);+ ) => {
+    ( $init:expr => $($x:expr),+ ) => {
         $init$(
             .combine($x.into())
         )*
@@ -137,7 +137,7 @@ mod tests {
     #[test]
     fn combine_macro() {
         let x = combine!{
-            Last::from(53) => None; 42; {let b = None; b};
+            Last::from(53) => None, 42, {let b = None; b},
         };
 
         assert_eq!(x.0, Some(42));
