@@ -16,7 +16,7 @@ pub trait Monoid: Semigroup {
     fn empty() -> Self;
 }
 
-#[derive(Debug, Default, Monoid)]
+#[derive(Debug, Default)]
 pub struct Last<T>(Option<T>);
 
 impl<T> From<T> for Last<T> {
@@ -37,22 +37,28 @@ impl<T> Semigroup for Last<T> {
     }
 }
 
-#[derive(Debug, Default, Semigroup, Monoid, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Sum<T: Semigroup + num_traits::Num>(T);
+impl<T> Monoid for Last<T> {
+    fn empty() -> Self {
+        Self(None)
+    }
+}
 
-impl<T: Semigroup + num_traits::Num + PartialEq> PartialEq<T> for Sum<T> {
+#[derive(Debug, Default, Semigroup, Monoid, PartialEq, Eq, PartialOrd, Ord)]
+pub struct Sum<T: num_traits::Num>(T);
+
+impl<T: num_traits::Num + PartialEq> PartialEq<T> for Sum<T> {
     fn eq(&self, other: &T) -> bool {
         self.0 == *other
     }
 }
 
-impl<T: Semigroup + num_traits::Num + PartialOrd> PartialOrd<T> for Sum<T> {
+impl<T: num_traits::Num + PartialOrd> PartialOrd<T> for Sum<T> {
     fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other)
     }
 }
 
-impl<T: Semigroup + num_traits::Num> From<T> for Sum<T> {
+impl<T: num_traits::Num> From<T> for Sum<T> {
     fn from(value: T) -> Self {
         Self(value)
     }

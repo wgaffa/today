@@ -51,6 +51,7 @@ pub fn monoid(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, data, generics, .. } = parse_macro_input!(input);
 
     let generics = add_trait_bounds(generics, parse_quote!(::core::default::Default));
+    let generics = add_trait_bounds(generics, parse_quote!(Semigroup));
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let monoid_fn = match data {
