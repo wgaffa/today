@@ -26,7 +26,7 @@ fn read_env() -> anyhow::Result<AppPaths> {
                 Ok(_meta) => Ok(
                     AppPaths {
                         config: PathBuf::from(x).into(),
-                        ..Default::default()
+                        ..Monoid::empty()
                     }
                 ),
                 Err(e) => Err(Error::new(e)),
@@ -40,7 +40,7 @@ fn read_xdg() -> anyhow::Result<AppPaths> {
         Ok(()) => Ok(
             AppPaths {
                 config: path.into(),
-                ..Default::default()
+                ..Monoid::empty()
             }
         ),
         Err(e) => Err(Error::new(e)),
@@ -49,7 +49,7 @@ fn read_xdg() -> anyhow::Result<AppPaths> {
 
 fn main() -> anyhow::Result<()> {
     let config = combine!{
-        AppPaths::default() =>
+        AppPaths::empty() =>
             read_env().unwrap_or_default(),
             read_xdg().unwrap_or_default(),
     };
