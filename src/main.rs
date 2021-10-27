@@ -1,7 +1,12 @@
 use std::{collections::HashMap, env, fs, io::{self, ErrorKind}, path::{Path, PathBuf}};
-use anyhow::{anyhow, Error};
 
-use today::{TaskManager, combine, partial_config::{Last, Semigroup, Monoid}};
+use today::{
+    TaskManager,
+    combine,
+    semigroup::Semigroup,
+    monoid::{Last, Monoid},
+};
+
 use today_derive::*;
 
 mod ui;
