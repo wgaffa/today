@@ -1,4 +1,4 @@
-use std::{collections::HashMap, env, fs, io::{self, ErrorKind}, path::{Path, PathBuf}};
+use std::{collections::HashMap, env, path::PathBuf};
 
 use today::{
     TaskManager,
@@ -92,28 +92,3 @@ fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn config_path() -> Option<PathBuf> {
-    let config_path = dirs::config_dir();
-
-    const APP_ID: &str = "today";
-    config_path.and_then(|mut x| {
-        x.push(APP_ID);
-        Some(x)
-    })
-}
-
-fn setup_config<P: AsRef<Path>>(path: P) -> Result<(), io::Error> {
-    match fs::metadata(&path) {
-        Err(e) if e.kind() == ErrorKind::NotFound => {
-            fs::create_dir_all(&path)
-        },
-        Ok(meta) => {
-            if meta.is_dir() {
-                Ok(())
-            } else {
-                todo!()
-            }
-        }
-        Err(e) => Err(e),
-    }
-}
