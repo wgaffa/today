@@ -61,8 +61,8 @@ fn read_xdg() -> anyhow::Result<AppPaths> {
 fn main() -> anyhow::Result<()> {
     let config = combine!{
         AppPaths::empty() =>
-            read_env().unwrap_or_default(),
             read_xdg().unwrap_or_default(),
+            read_env().unwrap_or_default(),
     };
     println!("{:?}", config);
 
