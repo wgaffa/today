@@ -5,7 +5,7 @@ use today_derive::*;
 #[derive(Default, Semigroup, Monoid, Debug)]
 pub struct PartialConfig {
     pub config_path: Last<PathBuf>,
-    pub verbose: Sum<u32>,
+    pub verbose: Option<Sum<u32>>,
 }
 
 pub trait Semigroup {
@@ -14,6 +14,27 @@ pub trait Semigroup {
 
 pub trait Monoid: Semigroup {
     fn empty() -> Self;
+}
+
+impl<T: Semigroup> Semigroup for Option<T> {
+    fn combine(self, rhs: Self) -> Self {
+        match self {
+            Some(left) => match rhs {
+                Some(right) => Some(left.combine(right)),
+                None => Some(left),
+            },
+            None => match rhs {
+                Some(right) => Some(right),
+                None => None,
+            }
+        }
+    }
+}
+
+impl<T: Semigroup> Monoid for Option<T> {
+    fn empty() -> Self {
+        None
+    }
 }
 
 #[derive(Debug, Default)]
@@ -44,32 +65,38 @@ impl<T> Monoid for Last<T> {
 }
 
 #[derive(Debug, Default, Semigroup, Monoid, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Sum<T: num_traits::Num>(T);
+pub struct Sum<T>(T);
 
-impl<T: num_traits::Num + PartialEq> PartialEq<T> for Sum<T> {
+impl<T: PartialEq> PartialEq<T> for Sum<T> {
     fn eq(&self, other: &T) -> bool {
         self.0 == *other
     }
 }
 
-impl<T: num_traits::Num + PartialOrd> PartialOrd<T> for Sum<T> {
+impl<T: PartialOrd> PartialOrd<T> for Sum<T> {
     fn partial_cmp(&self, other: &T) -> Option<std::cmp::Ordering> {
         self.0.partial_cmp(other)
     }
 }
 
-impl<T: num_traits::Num> From<T> for Sum<T> {
+impl<T> From<T> for Sum<T> {
     fn from(value: T) -> Self {
         Self(value)
     }
 }
 
 #[derive(Debug, Semigroup)]
-pub struct Product<T: num_traits::Num>(T);
+pub struct Product<T>(T);
 
 impl<T: Semigroup + num_traits::Num> Monoid for Product<T> {
     fn empty() -> Self {
         Self( num_traits::identities::One::one() )
+    }
+}
+
+impl<T> From<T> for Product<T> {
+    fn from(value: T) -> Self {
+        Self(value)
     }
 }
 
@@ -105,13 +132,7 @@ impl_monoid_for_default!(
 
 #[macro_export]
 macro_rules! combine {
-    ( $init:expr => $($x:expr,)+ ) => {
-        $init$(
-            .combine($x.into())
-        )*
-    };
-
-    ( $init:expr => $($x:expr),+ ) => {
+    ( $init:expr => $($x:expr),+ $(,)? ) => {
         $init$(
             .combine($x.into())
         )*
@@ -138,6 +159,36 @@ mod tests {
         let sum = nums.into_iter().fold(Sum::empty(), |acc, x| acc.combine(Sum::from(x)));
 
         assert_eq!(sum, 86);
+    }
+
+    #[test]
+    fn option_sum() {
+        let sum = None
+            .combine(Some(Sum::from(10)))
+            .combine(None)
+            .combine(Some(Sum::from(5)))
+            .combine(Some(Sum::from(7)))
+            .combine(None)
+            .combine(Some(Sum::from(42)))
+            .combine(None);
+
+        assert_eq!(sum.unwrap(), 64);
+    }
+
+    #[test]
+    fn option_combine_macro() {
+        let sum: Option<Sum<i32>> = combine!(
+            None =>
+            Sum::from(10),
+            None,
+            Sum::from(5),
+            Sum::from(7),
+            None,
+            Sum::from(42),
+            None,
+        );
+
+        assert_eq!(sum.unwrap(), 64);
     }
 
     #[test]
