@@ -1,10 +1,4 @@
-use std::{
-    collections::HashMap,
-    env,
-    fs,
-    io::{self, ErrorKind},
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, env, fs, io::{self, ErrorKind}, path::{Path, PathBuf}};
 use anyhow::{anyhow, Error};
 
 use today::{TaskManager, combine, partial_config::{Last, Semigroup, Monoid}};
@@ -18,33 +12,45 @@ struct AppPaths {
     data: Last<PathBuf>,
 }
 
+macro_rules! env_paths {
+    ($t:ident , $($i:ident as $e:expr => $f:expr),* $(,)?) => {
+        $t {
+            $(
+                $i: env::var($e).ok().map($f).into(),
+            )*
+        }
+    };
+}
+
 fn read_env() -> anyhow::Result<AppPaths> {
-    env::var("TODAY_CONFIG_PATH")
-        .map_err(|e| anyhow::Error::new(e))
-        .and_then(|x| {
-            match fs::metadata(&x) {
-                Ok(_meta) => Ok(
-                    AppPaths {
-                        config: PathBuf::from(x).into(),
-                        ..Monoid::empty()
-                    }
-                ),
-                Err(e) => Err(Error::new(e)),
-            }
-        })
+    Ok(
+        env_paths! {
+            AppPaths,
+            config as "TODAY_CONFIG_PATH" => PathBuf::from,
+            data as "TODAY_DATA_PATH" => PathBuf::from,
+        }
+    )
+}
+
+macro_rules! xdg_paths {
+    ($t:ident , $($i:ident as $e:expr => $f:expr),* $(,)?) => (
+        $t {
+            $(
+                $i: $e.map($f).into(),
+            )*
+        }
+    )
 }
 
 fn read_xdg() -> anyhow::Result<AppPaths> {
-    let path = config_path().ok_or(anyhow!("Failed to get default XDG config path"))?;
-    match setup_config(&path) {
-        Ok(()) => Ok(
-            AppPaths {
-                config: path.into(),
-                ..Monoid::empty()
-            }
-        ),
-        Err(e) => Err(Error::new(e)),
-    }
+    let push_app_id = |mut x: PathBuf| {x.push("today"); x};
+    Ok(
+        xdg_paths! {
+            AppPaths,
+            config as dirs::config_dir() => push_app_id,
+            data as dirs::data_dir() => push_app_id,
+        }
+    )
 }
 
 fn main() -> anyhow::Result<()> {
