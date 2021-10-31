@@ -7,11 +7,14 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.44"
-chrono = "0.4.19"
+chrono = { version = "0.4.19", features = ["serde"] }
 dirs = "4.0.0"
 inquire = { version = "0.2.1", default_features = false, features = ["date", "termion", "builtin_validators"] }
 num-traits = "0.2.14"
+ron = "0.7.0"
+serde = { version = "1.0.130", features = ["derive"] }
 today_derive = { path = "today_derive" }
+url = { version = "2.2.2", features = ["serde"] }
 
 [dev-dependencies]
 test-case = "1.2.0"

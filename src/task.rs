@@ -1,6 +1,7 @@
 use chrono::prelude::*;
+use serde::Serialize;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 pub struct Task {
     name: String,
     due: Option<DateTime<Utc>>,
@@ -82,5 +83,9 @@ impl TaskManager {
 
     pub fn add(&mut self, task: Task) {
         self.tasks.push(task);
+    }
+
+    pub fn iter(&self) -> std::slice::Iter<Task> {
+        self.tasks.iter()
     }
 }

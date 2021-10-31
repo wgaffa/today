@@ -1,4 +1,5 @@
 use std::{collections::HashMap, env, path::PathBuf};
+use url::Url;
 
 use today::{
     TaskManager,
@@ -66,6 +67,10 @@ fn main() -> anyhow::Result<()> {
     };
     println!("{:?}", config);
 
+    let url = Url::parse("file:///home/wgaffa/projects/today/").unwrap();
+    let path = url.to_file_path();
+    println!("{:?}", path);
+
     let mut tasks = TaskManager::new();
     let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> = HashMap::new();
     dispatcher.insert(ui::MenuOption::Add, |tasks| {
@@ -85,6 +90,8 @@ fn main() -> anyhow::Result<()> {
         callback(&mut tasks)?;
 
         if option == ui::MenuOption::Quit {
+            let db = tasks.iter().collect::<Vec<_>>();
+            println!("{}", ron::to_string(&db).unwrap());
             break;
         }
     }
