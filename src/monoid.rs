@@ -27,6 +27,12 @@ impl<T> From<Option<T>> for Last<T> {
     }
 }
 
+impl<T> From<Last<T>> for Option<T> {
+    fn from(value: Last<T>) -> Self {
+        value.0
+    }
+}
+
 impl<T> Semigroup for Last<T> {
     fn combine(self, rhs: Self) -> Self {
         Self(rhs.0.or(self.0))
@@ -149,5 +155,13 @@ mod tests {
         };
 
         assert_eq!(x.0, Some(42));
+    }
+
+    #[test]
+    fn last_to_option_conversion() {
+        let last = Last::from(42);
+        let res: Option<i32> = last.into();
+
+        assert_eq!(res, Some(42));
     }
 }
