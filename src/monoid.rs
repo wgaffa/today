@@ -13,7 +13,7 @@ impl<T: Semigroup> Monoid for Option<T> {
 }
 
 #[derive(Debug, Default)]
-pub struct Last<T>(Option<T>);
+pub struct Last<T>(pub Option<T>);
 
 impl<T> From<T> for Last<T> {
     fn from(value: T) -> Self {
@@ -46,7 +46,7 @@ impl<T> Monoid for Last<T> {
 }
 
 #[derive(Debug, Default, Semigroup, Monoid, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Sum<T>(T);
+pub struct Sum<T>(pub T);
 
 impl<T: PartialEq> PartialEq<T> for Sum<T> {
     fn eq(&self, other: &T) -> bool {
@@ -67,7 +67,7 @@ impl<T> From<T> for Sum<T> {
 }
 
 #[derive(Debug, Semigroup)]
-pub struct Product<T>(T);
+pub struct Product<T>(pub T);
 
 impl<T: Semigroup + num_traits::Num> Monoid for Product<T> {
     fn empty() -> Self {
