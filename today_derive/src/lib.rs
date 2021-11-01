@@ -50,8 +50,7 @@ pub fn semigroup(input: TokenStream) -> TokenStream {
 pub fn monoid(input: TokenStream) -> TokenStream {
     let DeriveInput { ident, data, generics, .. } = parse_macro_input!(input);
 
-    let generics = add_trait_bounds(generics, parse_quote!(::core::default::Default));
-    let generics = add_trait_bounds(generics, parse_quote!(Semigroup));
+    let generics = add_trait_bounds(generics, parse_quote!(Monoid));
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
 
     let monoid_fn = match data {
@@ -74,7 +73,7 @@ pub fn monoid(input: TokenStream) -> TokenStream {
         Data::Struct(DataStruct{ fields: Fields::Unnamed(ref fields), .. }) => {
             let recurse = fields.unnamed.iter().map(|f| {
                 quote_spanned! {f.span()=>
-                    ::core::default::Default::default()
+                    Monoid::empty()
                 }
             });
 

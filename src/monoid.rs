@@ -45,7 +45,7 @@ impl<T> Monoid for Last<T> {
     }
 }
 
-#[derive(Debug, Default, Semigroup, Monoid, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Semigroup, Monoid, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Sum<T>(pub T);
 
 impl<T: PartialEq> PartialEq<T> for Sum<T> {
