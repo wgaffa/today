@@ -5,7 +5,8 @@ use today::{
     TaskManager,
     combine,
     semigroup::Semigroup,
-    monoid::{Last, Monoid},
+    monoid::{Sum, Last, Monoid},
+    partial_config::{Config, Build},
 };
 
 use today_derive::*;
@@ -60,6 +61,21 @@ fn read_xdg() -> anyhow::Result<AppPaths> {
 }
 
 fn main() -> anyhow::Result<()> {
+    let test: Config<Build> = Config {
+        verbose: Sum::from(2).into(),
+        out_file: Last::from(PathBuf::from("/home/wgaffa")).into(),
+    };
+
+    let test2: Config<Build> = Config {
+        verbose: Sum::from(5).into(),
+        out_file: Monoid::empty(),
+    };
+
+    let c = test.combine(test2);
+    let r = c.build();
+
+    println!("{:#?}", r);
+
     let config = combine!{
         AppPaths::empty() =>
             read_xdg().unwrap_or_default(),
