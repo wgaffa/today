@@ -78,11 +78,36 @@ impl<M: Monoid, A: Default> Monoid for Select<Build, M, A> {
     }
 }
 
-#[derive(Debug)]
-pub struct Config<T> {
-    pub verbose: Select<T, Sum<i32>, i32>,
-    pub out_file: Select<T, Last<PathBuf>, PathBuf>,
+#[macro_export]
+macro_rules! config {
+    ($($der:meta),+ $name:ident { $(,)? }) => {
+        $(#[$der])*
+        pub struct $name<T> {
+            _phantom_data: PhantomData<T>,
+        }
+    };
+    ($($der:meta),+ $name:ident { $($i:ident : $m:ty => $t:ty),* $(,)? }) => {
+        $(#[$der])*
+        pub struct $name<T> {
+            $(
+                pub $i: Select<T, $m, $t>,
+            )*
+        }
+    };
+    ($($tail:tt)*) => {
+        $crate::config!(
+            derive(Debug)
+            $($tail)*
+        );
+    };
 }
+
+config!(
+    Config {
+        verbose: Sum<i32> => i32,
+        out_file: Last<PathBuf> => PathBuf,
+    }
+);
 
 impl Config<Build> {
     pub fn build(self) -> Config<Run> {
