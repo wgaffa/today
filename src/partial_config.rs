@@ -133,16 +133,23 @@ macro_rules! semigroup_default {
     };
 }
 
-semigroup_default!(Config<Build>: verbose, out_file);
-
-impl Monoid for Config<Build> {
-    fn empty() -> Self {
-        Self {
-            verbose: Monoid::empty(),
-            out_file: Monoid::empty(),
+#[macro_export]
+macro_rules! monoid_default {
+    ($t:ty : $($i:ident),*) => {
+        impl Monoid for $t {
+            fn empty() -> Self {
+                Self {
+                    $(
+                        $i: Monoid::empty(),
+                    )*
+                }
+            }
         }
-    }
+    };
 }
+
+semigroup_default!(Config<Build>: verbose, out_file);
+monoid_default!(Config<Build>: verbose, out_file);
 
 impl<T> Semigroup for PhantomData<T> {
     fn combine(self, _rhs: Self) -> Self {
