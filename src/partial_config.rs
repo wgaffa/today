@@ -118,14 +118,22 @@ impl Config<Build> {
     }
 }
 
-impl Semigroup for Config<Build> {
-    fn combine(self, rhs: Self) -> Self {
-        Self {
-            verbose: self.verbose.combine(rhs.verbose),
-            out_file: self.out_file.combine(rhs.out_file),
+#[macro_export]
+macro_rules! semigroup_default {
+    ($t:ty : $($i:ident),*) => {
+        impl Semigroup for $t {
+            fn combine(self, rhs: Self) -> Self {
+                Self {
+                    $(
+                        $i: self.$i.combine(rhs.$i),
+                    )*
+                }
+            }
         }
-    }
+    };
 }
+
+semigroup_default!(Config<Build>: verbose, out_file);
 
 impl Monoid for Config<Build> {
     fn empty() -> Self {
