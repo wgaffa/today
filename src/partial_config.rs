@@ -22,7 +22,7 @@ pub struct Run;
 #[derive(Debug, Default)]
 pub struct Select<T, M, A> {
     inner: M,
-    val: A,
+    val: Option<A>,
     _phantom_data: PhantomData<T>,
 }
 
@@ -34,15 +34,15 @@ impl<M, A> Select<Build, M, A> {
 
 impl<M, A> Select<Run, M, A> {
     pub fn get(self) -> A {
-        self.val
+        self.val.unwrap()
     }
 }
 
-impl<M, A: Default> From<M> for Select<Build, M, A> {
+impl<M, A> From<M> for Select<Build, M, A> {
     fn from(value: M) -> Self {
         Self {
             inner: value,
-            val: Default::default(),
+            val: None,
             _phantom_data: PhantomData,
         }
     }
@@ -52,27 +52,27 @@ impl<M: Monoid, A> From<A> for Select<Run, M, A> {
     fn from(val: A) -> Self {
         Self {
             inner: Monoid::empty(),
-            val,
+            val: Some(val),
             _phantom_data: PhantomData,
         }
     }
 }
 
-impl<M: Semigroup, A: Default> Semigroup for Select<Build, M, A> {
+impl<M: Semigroup, A> Semigroup for Select<Build, M, A> {
     fn combine(self, rhs: Self) -> Self {
         Self {
             inner: self.inner.combine(rhs.inner),
-            val: Default::default(),
+            val: None,
             _phantom_data: PhantomData,
         }
     }
 }
 
-impl<M: Monoid, A: Default> Monoid for Select<Build, M, A> {
+impl<M: Monoid, A> Monoid for Select<Build, M, A> {
     fn empty() -> Self {
         Self {
             inner: Monoid::empty(),
-            val: Default::default(),
+            val: None,
             _phantom_data: PhantomData,
         }
     }
