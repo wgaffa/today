@@ -5,36 +5,48 @@ use today::{
     TaskManager,
     combine,
     semigroup::Semigroup,
-    monoid::{Sum, Last, Monoid},
-    partial_config::{Config, Build},
+    monoid::{Last, Monoid},
+    partial_config::{Select, Build, Run},
 };
-
-use today_derive::*;
 
 mod ui;
 
-#[derive(Debug, Semigroup, Monoid, Default)]
-struct AppPaths {
-    config: Last<PathBuf>,
-    data: Last<PathBuf>,
+today::config!(
+    derive(Debug, Default)
+    AppPaths {
+        config: Last<PathBuf> => PathBuf,
+        data: Last<PathBuf> => PathBuf,
+    }
+);
+
+impl AppPaths<Build> {
+    fn build(self) -> AppPaths<Run> {
+        AppPaths {
+            config: self.config.get().0.unwrap_or_default().into(),
+            data: self.data.get().0.unwrap_or_default().into(),
+        }
+    }
 }
+
+today::semigroup_default!(AppPaths<Build>: config, data);
+today::monoid_default!(AppPaths<Build>: config, data);
 
 macro_rules! env_paths {
     ($t:ident , $($i:ident as $e:expr => $f:expr),* $(,)?) => {
         $t {
             $(
-                $i: env::var($e).ok().map($f).into(),
+                $i: env::var($e).ok().map($f).unwrap_or_default().into(),
             )*
         }
     };
 }
 
-fn read_env() -> anyhow::Result<AppPaths> {
+fn read_env() -> anyhow::Result<AppPaths<Build>> {
     Ok(
         env_paths! {
             AppPaths,
-            config as "TODAY_CONFIG_PATH" => PathBuf::from,
-            data as "TODAY_DATA_PATH" => PathBuf::from,
+            config as "TODAY_CONFIG_PATH" => |x| Last::from(PathBuf::from(x)),
+            data as "TODAY_DATA_PATH" => |x| Last::from(PathBuf::from(x)),
         }
     )
 }
@@ -43,44 +55,29 @@ macro_rules! xdg_paths {
     ($t:ident , $($i:ident as $e:expr => $f:expr),* $(,)?) => (
         $t {
             $(
-                $i: $e.map($f).into(),
+                $i: $e.map($f).unwrap_or_default().into(),
             )*
         }
     )
 }
 
-fn read_xdg() -> anyhow::Result<AppPaths> {
+fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
     let push_app_id = |mut x: PathBuf| {x.push("today"); x};
     Ok(
         xdg_paths! {
             AppPaths,
-            config as dirs::config_dir() => push_app_id,
-            data as dirs::data_dir() => push_app_id,
+            config as dirs::config_dir() => |x| Last::from(push_app_id(x)),
+            data as dirs::data_dir() => |x| Last::from(push_app_id(x)),
         }
     )
 }
 
 fn main() -> anyhow::Result<()> {
-    let test: Config<Build> = Config {
-        verbose: Sum::from(2).into(),
-        out_file: Last::from(PathBuf::from("/home/wgaffa")).into(),
-    };
-
-    let test2: Config<Build> = Config {
-        verbose: Sum::from(5).into(),
-        out_file: Monoid::empty(),
-    };
-
-    let c = test.combine(test2);
-    let r = c.build();
-
-    println!("{:#?}", r);
-
     let config = combine!{
         AppPaths::empty() =>
             read_xdg().unwrap_or_default(),
             read_env().unwrap_or_default(),
-    };
+    }.build();
     println!("{:?}", config);
 
     let url = Url::parse("file:///home/wgaffa/projects/today/").unwrap();

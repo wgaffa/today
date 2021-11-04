@@ -13,13 +13,13 @@ pub struct PartialConfig {
     pub verbose: Option<Sum<u32>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Build;
 
 #[derive(Debug)]
 pub struct Run;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Select<T, M, A> {
     inner: M,
     val: A,
@@ -27,14 +27,14 @@ pub struct Select<T, M, A> {
 }
 
 impl<M, A> Select<Build, M, A> {
-    pub fn get(&self) -> &M {
-        &self.inner
+    pub fn get(self) -> M {
+        self.inner
     }
 }
 
 impl<M, A> Select<Run, M, A> {
-    pub fn get(&self) -> &A {
-        &self.val
+    pub fn get(self) -> A {
+        self.val
     }
 }
 
@@ -109,8 +109,32 @@ config!(
     }
 );
 
-impl Config<Build> {
-    pub fn build(self) -> Config<Run> {
+#[macro_export]
+macro_rules! config_builder {
+    ($t:ident { $($field:ident => $e:expr),* $(,)? }) => {
+        impl $t<Build> {
+            pub fn build(self) -> $t<Run> {
+                $t {
+                    $(
+                        $field: {
+                            let tmp = $e;
+                            tmp(self.$field.inner)
+                        },
+                    )*
+                }
+            }
+        }
+    };
+}
+
+pub trait Builder {
+    type Item;
+    fn build(self) -> Self::Item;
+}
+
+impl Builder for Config<Build> {
+    type Item = Config<Run>;
+    fn build(self) -> Self::Item {
         Config {
             verbose: self.verbose.inner.0.into(),
             out_file: self.out_file.inner.0.unwrap_or_default().into(),
