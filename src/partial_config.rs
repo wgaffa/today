@@ -164,14 +164,3 @@ macro_rules! monoid_default {
     };
 }
 
-impl<T> Semigroup for PhantomData<T> {
-    fn combine(self, _rhs: Self) -> Self {
-        self
-    }
-}
-
-impl<T> Monoid for PhantomData<T> {
-    fn empty() -> Self {
-        Self
-    }
-}

@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use today_derive::*;
 
 use crate::semigroup::Semigroup;
@@ -101,6 +102,12 @@ macro_rules! impl_monoid_for_default {
 
 impl_monoid_for_default!(
     usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
+
+impl<T> Monoid for PhantomData<T> {
+    fn empty() -> Self {
+        Self
+    }
+}
 
 #[cfg(test)]
 mod tests {
