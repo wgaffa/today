@@ -1,5 +1,7 @@
-use std::marker::PhantomData;
-use std::path::PathBuf;
+use std::{
+    marker::PhantomData,
+    path::PathBuf,
+};
 
 use crate::{
     semigroup::Semigroup,
@@ -19,30 +21,51 @@ pub struct Build;
 #[derive(Debug)]
 pub struct Run;
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
+enum Selection<M, A> {
+    Build(M),
+    Run(A),
+}
+
+#[derive(Debug)]
 pub struct Select<T, M, A> {
-    inner: M,
-    val: Option<A>,
+    inner: Selection<M, A>,
     _phantom_data: PhantomData<T>,
+}
+
+impl<T, M: Monoid, A> Default for Select<T, M, A> {
+    fn default() -> Self {
+        Self {
+            inner: Selection::Build(Monoid::empty()),
+            _phantom_data: PhantomData,
+        }
+    }
 }
 
 impl<M, A> Select<Build, M, A> {
     pub fn get(self) -> M {
-        self.inner
+        if let Selection::Build(x) = self.inner {
+            x
+        } else {
+            panic!("Select in wrong state")
+        }
     }
 }
 
 impl<M, A> Select<Run, M, A> {
     pub fn get(self) -> A {
-        self.val.unwrap()
+        if let Selection::Run(x) = self.inner {
+            x
+        } else {
+            panic!("Select in wrong state")
+        }
     }
 }
 
 impl<M, A> From<M> for Select<Build, M, A> {
     fn from(value: M) -> Self {
         Self {
-            inner: value,
-            val: None,
+            inner: Selection::Build(value),
             _phantom_data: PhantomData,
         }
     }
@@ -51,8 +74,7 @@ impl<M, A> From<M> for Select<Build, M, A> {
 impl<M: Monoid, A> From<A> for Select<Run, M, A> {
     fn from(val: A) -> Self {
         Self {
-            inner: Monoid::empty(),
-            val: Some(val),
+            inner: Selection::Run(val),
             _phantom_data: PhantomData,
         }
     }
@@ -61,8 +83,11 @@ impl<M: Monoid, A> From<A> for Select<Run, M, A> {
 impl<M: Semigroup, A> Semigroup for Select<Build, M, A> {
     fn combine(self, rhs: Self) -> Self {
         Self {
-            inner: self.inner.combine(rhs.inner),
-            val: None,
+            inner: match (self.inner, rhs.inner) {
+                (Selection::Build(left), Selection::Build(right)) =>
+                    Selection::Build(left.combine(right)),
+                _ => panic!("Select Build was in a wrong state to combine"),
+            },
             _phantom_data: PhantomData,
         }
     }
@@ -71,8 +96,7 @@ impl<M: Semigroup, A> Semigroup for Select<Build, M, A> {
 impl<M: Monoid, A> Monoid for Select<Build, M, A> {
     fn empty() -> Self {
         Self {
-            inner: Monoid::empty(),
-            val: None,
+            inner: Selection::Build(Monoid::empty()),
             _phantom_data: PhantomData,
         }
     }
@@ -136,8 +160,8 @@ impl Builder for Config<Build> {
     type Item = Config<Run>;
     fn build(self) -> Self::Item {
         Config {
-            verbose: self.verbose.inner.0.into(),
-            out_file: self.out_file.inner.0.unwrap_or_default().into(),
+            verbose: self.verbose.get().0.into(),
+            out_file: self.out_file.get().0.unwrap_or_default().into(),
         }
     }
 }
