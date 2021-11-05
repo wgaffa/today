@@ -1,19 +1,9 @@
-use std::{
-    marker::PhantomData,
-    path::PathBuf,
-};
+use std::marker::PhantomData;
 
 use crate::{
     semigroup::Semigroup,
-    monoid::{Last, Sum, Monoid},
+    monoid::Monoid,
 };
-
-use today_derive::*;
-
-#[derive(Default, Semigroup, Monoid, Debug)]
-pub struct PartialConfig {
-    pub verbose: Option<Sum<u32>>,
-}
 
 #[derive(Debug, Default)]
 pub struct Build;
@@ -126,13 +116,6 @@ macro_rules! config {
     };
 }
 
-config!(
-    Config {
-        verbose: Sum<i32> => i32,
-        out_file: Last<PathBuf> => PathBuf,
-    }
-);
-
 #[macro_export]
 macro_rules! config_builder {
     ($t:ident { $($field:ident => $e:expr),* $(,)? }) => {
@@ -149,21 +132,6 @@ macro_rules! config_builder {
             }
         }
     };
-}
-
-pub trait Builder {
-    type Item;
-    fn build(self) -> Self::Item;
-}
-
-impl Builder for Config<Build> {
-    type Item = Config<Run>;
-    fn build(self) -> Self::Item {
-        Config {
-            verbose: self.verbose.get().0.into(),
-            out_file: self.out_file.get().0.unwrap_or_default().into(),
-        }
-    }
 }
 
 #[macro_export]
@@ -195,9 +163,6 @@ macro_rules! monoid_default {
         }
     };
 }
-
-semigroup_default!(Config<Build>: verbose, out_file);
-monoid_default!(Config<Build>: verbose, out_file);
 
 impl<T> Semigroup for PhantomData<T> {
     fn combine(self, _rhs: Self) -> Self {
