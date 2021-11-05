@@ -64,3 +64,47 @@ macro_rules! semigroup_default {
     };
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::monoid::{Sum, Last};
+
+    #[test]
+    fn option_sum() {
+        let sum = None
+            .combine(Some(Sum::from(10)))
+            .combine(None)
+            .combine(Some(Sum::from(5)))
+            .combine(Some(Sum::from(7)))
+            .combine(None)
+            .combine(Some(Sum::from(42)))
+            .combine(None);
+
+        assert_eq!(sum.unwrap(), 64);
+    }
+
+    #[test]
+    fn option_combine_macro() {
+        let sum: Option<Sum<i32>> = crate::combine!(
+            None =>
+            Sum::from(10),
+            None,
+            Sum::from(5),
+            Sum::from(7),
+            None,
+            Sum::from(42),
+            None,
+        );
+
+        assert_eq!(sum.unwrap(), 64);
+    }
+
+    #[test]
+    fn combine_macro() {
+        let x = crate::combine!{
+            Last::from(53) => None, 42, {let b = None; b},
+        };
+
+        assert_eq!(x.0, Some(42));
+    }
+}
