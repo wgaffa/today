@@ -109,6 +109,21 @@ impl<T> Monoid for PhantomData<T> {
     }
 }
 
+#[macro_export]
+macro_rules! monoid_default {
+    ($t:ty : $($i:ident),*) => {
+        impl Monoid for $t {
+            fn empty() -> Self {
+                Self {
+                    $(
+                        $i: Monoid::empty(),
+                    )*
+                }
+            }
+        }
+    };
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

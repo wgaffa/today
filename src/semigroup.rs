@@ -48,3 +48,19 @@ impl<T> Semigroup for PhantomData<T> {
         self
     }
 }
+
+#[macro_export]
+macro_rules! semigroup_default {
+    ($t:ty : $($i:ident),*) => {
+        impl Semigroup for $t {
+            fn combine(self, rhs: Self) -> Self {
+                Self {
+                    $(
+                        $i: self.$i.combine(rhs.$i),
+                    )*
+                }
+            }
+        }
+    };
+}
+

@@ -134,33 +134,3 @@ macro_rules! config_builder {
     };
 }
 
-#[macro_export]
-macro_rules! semigroup_default {
-    ($t:ty : $($i:ident),*) => {
-        impl Semigroup for $t {
-            fn combine(self, rhs: Self) -> Self {
-                Self {
-                    $(
-                        $i: self.$i.combine(rhs.$i),
-                    )*
-                }
-            }
-        }
-    };
-}
-
-#[macro_export]
-macro_rules! monoid_default {
-    ($t:ty : $($i:ident),*) => {
-        impl Monoid for $t {
-            fn empty() -> Self {
-                Self {
-                    $(
-                        $i: Monoid::empty(),
-                    )*
-                }
-            }
-        }
-    };
-}
-
