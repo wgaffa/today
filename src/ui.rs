@@ -9,7 +9,7 @@ use inquire::{
 };
 use anyhow::Error;
 
-use today::Task;
+use today::{Task, TaskName};
 
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum MenuOption {
@@ -44,7 +44,7 @@ pub fn prompt_task() -> anyhow::Result<Task> {
 
     let due = prompt_due()?;
 
-    let task = Task::new(name);
+    let task = Task::new(TaskName::new(&name).unwrap());
     let task = if let Some(date) = due {
         let time = prompt_time()?;
         let due = date.and_time(time);
