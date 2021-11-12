@@ -108,7 +108,7 @@ impl Task {
 
     /// Get the name of the task
     pub fn name(&self) -> &str {
-        &self.name.0.as_str()
+        self.name.0.as_str()
     }
 
     /// Get the date of the task.
@@ -135,6 +135,12 @@ impl TaskManager {
 
     pub fn iter(&self) -> std::slice::Iter<Task> {
         self.tasks.iter()
+    }
+}
+
+impl Default for TaskManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

@@ -20,10 +20,7 @@ impl<T: Semigroup> Semigroup for Option<T> {
                 Some(right) => Some(left.combine(right)),
                 None => Some(left),
             },
-            None => match rhs {
-                Some(right) => Some(right),
-                None => None,
-            }
+            None => rhs,
         }
     }
 }
