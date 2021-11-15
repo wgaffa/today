@@ -43,6 +43,14 @@ impl<M, A> Select<Build, M, A> {
 }
 
 impl<M, A> Select<Run, M, A> {
+    pub fn value(&self) -> &A {
+        if let Selection::Run(ref x) = self.inner {
+            x
+        } else {
+            panic!("Select in wrong state")
+        }
+    }
+
     pub fn get(self) -> A {
         if let Selection::Run(x) = self.inner {
             x
@@ -65,6 +73,41 @@ impl<M: Monoid, A> From<A> for Select<Run, M, A> {
     fn from(val: A) -> Self {
         Self {
             inner: Selection::Run(val),
+            _phantom_data: PhantomData,
+        }
+    }
+}
+
+impl<M, A> From<Select<Run, M, A>> for Select<Build, M, A>
+where
+    M: Monoid,
+    A: Into<M>,
+{
+    fn from(value: Select<Run, M, A>) -> Self {
+        let value = match value.inner {
+            Selection::Build(_) => panic!("Select in wrong state"),
+            Selection::Run(x) => x,
+        };
+
+        Self {
+            inner: Selection::Build(value.into()),
+            _phantom_data: PhantomData,
+        }
+    }
+}
+
+impl<M, A> From<Select<Build, M, A>> for Select<Run, M, A>
+where
+    M: Monoid + Into<A>,
+{
+    fn from(value: Select<Build, M, A>) -> Self {
+        let value = match value.inner {
+            Selection::Run(_) => panic!("Select in wrong state"),
+            Selection::Build(x) => x,
+        };
+
+        Self {
+            inner: Selection::Run(value.into()),
             _phantom_data: PhantomData,
         }
     }

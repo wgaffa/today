@@ -1,5 +1,4 @@
 use std::{collections::HashMap, env, path::PathBuf};
-use url::Url;
 
 use today::{
     TaskManager,
@@ -20,10 +19,19 @@ today::config!(
 );
 
 impl AppPaths<Build> {
-    fn build(self) -> AppPaths<Run> {
+    pub fn build(self) -> AppPaths<Run> {
         AppPaths {
             config: self.config.get().0.unwrap_or_default().into(),
             data: self.data.get().0.unwrap_or_default().into(),
+        }
+    }
+}
+
+impl AppPaths<Run> {
+    pub fn unbuild(self) -> AppPaths<Build> {
+        AppPaths {
+            config: self.config.into(),
+            data: self.data.into(),
         }
     }
 }
@@ -79,10 +87,6 @@ fn main() -> anyhow::Result<()> {
             read_env().unwrap_or_default(),
     }.build();
     println!("{:?}", config);
-
-    let url = Url::parse("file:///home/wgaffa/projects/today/").unwrap();
-    let path = url.to_file_path();
-    println!("{:?}", path);
 
     let mut tasks = TaskManager::new();
     let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> = HashMap::new();
