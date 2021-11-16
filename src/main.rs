@@ -1,6 +1,12 @@
-use std::{collections::HashMap, env, path::PathBuf};
+use std::{
+    collections::HashMap,
+    env,
+    path::{Path, PathBuf},
+    fs,
+};
 
 use today::{
+    Task,
     TaskManager,
     combine,
     semigroup::Semigroup,
@@ -107,18 +113,21 @@ fn main() -> anyhow::Result<()> {
         callback(&mut tasks)?;
 
         if option == ui::MenuOption::Quit {
-            let filename = "db.ron";
             let mut file_path = config.data.value().to_owned();
-            file_path.push(filename);
-            println!("{:?}", file_path);
+            file_path.push("tasks.json");
 
             let db = tasks.iter().collect::<Vec<_>>();
-            let json = serde_json::to_string(&db)?;
-            println!("{:?}", json);
+            save_tasks(&db, file_path)?;
             break;
         }
     }
 
+    Ok(())
+}
+
+fn save_tasks<P: AsRef<Path>>(tasks: &[&Task], path: P) -> anyhow::Result<()> {
+    let json = serde_json::to_string(tasks)?;
+    fs::write(path, &json)?;
     Ok(())
 }
 
