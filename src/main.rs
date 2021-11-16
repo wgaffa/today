@@ -107,8 +107,14 @@ fn main() -> anyhow::Result<()> {
         callback(&mut tasks)?;
 
         if option == ui::MenuOption::Quit {
+            let filename = "db.ron";
+            let mut file_path = config.data.value().to_owned();
+            file_path.push(filename);
+            println!("{:?}", file_path);
+
             let db = tasks.iter().collect::<Vec<_>>();
-            println!("{}", ron::to_string(&db).unwrap());
+            let json = serde_json::to_string(&db)?;
+            println!("{:?}", json);
             break;
         }
     }
