@@ -12,7 +12,7 @@ use std::convert::AsRef;
 ///
 /// assert_eq!(name.as_str(), "Leading and trailing whitespaces");
 /// ```
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TaskName(String);
 
 impl TaskName {
@@ -46,7 +46,7 @@ impl AsRef<String> for TaskName {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Task {
     name: TaskName,
     due: Option<DateTime<Utc>>,
@@ -131,6 +131,10 @@ impl TaskManager {
 
     pub fn add(&mut self, task: Task) {
         self.tasks.push(task);
+    }
+
+    pub fn add_range(&mut self, tasks: &[Task]) {
+        self.tasks.extend_from_slice(tasks);
     }
 
     pub fn iter(&self) -> std::slice::Iter<Task> {

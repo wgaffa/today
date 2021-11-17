@@ -107,17 +107,21 @@ fn main() -> anyhow::Result<()> {
     });
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
 
+    let mut task_path = config.data.value().to_owned();
+    task_path.push("tasks.json");
+
+    let file_content = fs::read_to_string(&task_path)?;
+    let db = serde_json::from_str::<Vec<Task>>(&file_content)?;
+    tasks.add_range(&db);
+
     loop {
         let option = ui::menu()?;
         let callback = dispatcher.get_mut(&option).unwrap();
         callback(&mut tasks)?;
 
         if option == ui::MenuOption::Quit {
-            let mut file_path = config.data.value().to_owned();
-            file_path.push("tasks.json");
-
             let db = tasks.iter().collect::<Vec<_>>();
-            save_tasks(&db, file_path)?;
+            save_tasks(&db, &task_path)?;
             break;
         }
     }
