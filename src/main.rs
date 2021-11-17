@@ -102,10 +102,20 @@ fn main() -> anyhow::Result<()> {
         Ok(())
     });
     dispatcher.insert(ui::MenuOption::List, |tasks| {
+        let mut tasks = tasks.iter().collect::<Vec<_>>();
+        tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
         println!("{:#?}", tasks);
         Ok(())
     });
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
+    dispatcher.insert(ui::MenuOption::Today, |tasks| {
+        tasks.today()
+            .iter()
+            .map(|&x| x.name())
+            .for_each(|x| println!("{}", x));
+
+        Ok(())
+    });
 
     let mut task_path = config.data.value().to_owned();
     task_path.push("tasks.json");

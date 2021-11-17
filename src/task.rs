@@ -137,6 +137,16 @@ impl TaskManager {
         self.tasks.extend_from_slice(tasks);
     }
 
+    pub fn today(&self) -> Vec<&Task> {
+        let today = Utc::today();
+        self.tasks.iter()
+            .filter(|&x| match x.due() {
+                None => true,
+                Some(t) => today >= t.date(),
+            })
+            .collect()
+    }
+
     pub fn iter(&self) -> std::slice::Iter<Task> {
         self.tasks.iter()
     }

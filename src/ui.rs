@@ -11,11 +11,13 @@ use anyhow::Error;
 
 use today::{Task, TaskName};
 
+#[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum MenuOption {
     Add,
     List,
     Quit,
+    Today,
 }
 
 impl Display for MenuOption {
@@ -24,17 +26,21 @@ impl Display for MenuOption {
             MenuOption::Add => write!(f, "Add"),
             MenuOption::List => write!(f, "List"),
             MenuOption::Quit => write!(f, "Quit"),
+            MenuOption::Today => write!(f, "Today"),
         }
     }
 }
 
 pub fn menu() -> anyhow::Result<MenuOption> {
-    let options = vec![MenuOption::Add, MenuOption::List, MenuOption::Quit];
+    let options = vec![
+        MenuOption::Add,
+        MenuOption::Today,
+        MenuOption::List,
+        MenuOption::Quit,
+    ];
     let selected = Select::new("What do you wish to do?", options)
         .with_vim_mode(true)
         .prompt()?;
-
-    println!("{:?}", selected);
 
     Ok(selected)
 }
