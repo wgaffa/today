@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 use std::convert::AsRef;
 
@@ -62,10 +62,7 @@ impl Task {
     /// assert_eq!(task.name(), "Meet Dave");
     /// ```
     pub fn new(name: TaskName) -> Self {
-        Self {
-            name,
-            due: None,
-        }
+        Self { name, due: None }
     }
 
     /// Add a due date in UTC for a task
@@ -137,14 +134,14 @@ impl TaskManager {
         self.tasks.extend_from_slice(tasks);
     }
 
-    pub fn today(&self) -> Vec<&Task> {
+    pub fn today(&self) -> impl Iterator<Item = &Task> {
         let today = Utc::today();
-        self.tasks.iter()
-            .filter(|&x| match x.due() {
+        self.tasks
+            .iter()
+            .filter(move |&x| match x.due() {
                 None => true,
                 Some(t) => today >= t.date(),
             })
-            .collect()
     }
 
     pub fn iter(&self) -> std::slice::Iter<Task> {

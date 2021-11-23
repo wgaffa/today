@@ -1,13 +1,13 @@
-use std::fmt::Display;
+use anyhow::Error;
 use chrono::prelude::*;
 use inquire::{
-    CustomType, DateSelect, Select, Text,
+    error::{InquireError, InquireResult},
     formatter::StringFormatter,
     ui::{RenderConfig, Styled},
     validator::StringValidator,
-    error::{InquireError, InquireResult},
+    CustomType, DateSelect, Select, Text,
 };
-use anyhow::Error;
+use std::fmt::Display;
 
 use today::{Task, TaskName};
 
@@ -63,25 +63,23 @@ pub fn prompt_task() -> anyhow::Result<Task> {
 }
 
 fn prompt_time() -> InquireResult<NaiveTime> {
-    let time_style = RenderConfig::default_colored()
-        .with_canceled_prompt_indicator(Styled::new("00:00:00"));
+    let time_style =
+        RenderConfig::default_colored().with_canceled_prompt_indicator(Styled::new("00:00:00"));
 
     loop {
         let time = CustomType::<NaiveTime>::new("Time:")
             .with_default((NaiveTime::from_hms(0, 0, 0), &|x| format!("{}", x)))
             .with_placeholder("HH:MM:SS")
-            .with_parser(&|x| {
-                match NaiveTime::parse_from_str(x, "%H:%M") {
-                    Ok(time) => Ok(time),
-                    Err(_) => Err(()),
-                }
+            .with_parser(&|x| match NaiveTime::parse_from_str(x, "%H:%M") {
+                Ok(time) => Ok(time),
+                Err(_) => Err(()),
             })
             .with_render_config(time_style)
             .prompt();
 
         match time {
             Ok(t) => return Ok(t),
-            Err(InquireError::OperationCanceled) => {},
+            Err(InquireError::OperationCanceled) => {}
             Err(e) => panic!("Unrecoverable error: {}", e),
         }
     }
@@ -118,8 +116,8 @@ fn prompt_name() -> anyhow::Result<String> {
 
         match name {
             Ok(n) => return Ok(name_formatter(&n)),
-            Err(InquireError::OperationCanceled) => {},
+            Err(InquireError::OperationCanceled) => {}
             Err(e) => return Err(Error::new(e)),
         }
-    };
+    }
 }

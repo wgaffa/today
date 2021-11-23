@@ -38,7 +38,8 @@ macro_rules! impl_semigroup_with_addition {
 }
 
 impl_semigroup_with_addition!(
-    usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
+    usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64
+);
 
 impl<T> Semigroup for PhantomData<T> {
     fn combine(self, _rhs: Self) -> Self {
@@ -64,7 +65,7 @@ macro_rules! semigroup_default {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::monoid::{Sum, Last};
+    use crate::monoid::{Last, Sum};
 
     #[test]
     fn option_sum() {
@@ -98,7 +99,7 @@ mod tests {
 
     #[test]
     fn combine_macro() {
-        let x = crate::combine!{
+        let x = crate::combine! {
             Last::from(53) => None, 42, {let b = None; b},
         };
 

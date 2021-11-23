@@ -78,7 +78,7 @@ pub struct Product<T>(pub T);
 
 impl<T: Semigroup + num_traits::Num> Monoid for Product<T> {
     fn empty() -> Self {
-        Self( num_traits::identities::One::one() )
+        Self(num_traits::identities::One::one())
     }
 }
 
@@ -100,8 +100,7 @@ macro_rules! impl_monoid_for_default {
     };
 }
 
-impl_monoid_for_default!(
-    usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
+impl_monoid_for_default!(usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
 
 impl<T> Monoid for PhantomData<T> {
     fn empty() -> Self {
@@ -141,7 +140,9 @@ mod tests {
     #[test]
     fn sum_test() {
         let nums = vec![10, 24, 3, 7, 42];
-        let sum = nums.into_iter().fold(Sum::empty(), |acc, x| acc.combine(Sum::from(x)));
+        let sum = nums
+            .into_iter()
+            .fold(Sum::empty(), |acc, x| acc.combine(Sum::from(x)));
 
         assert_eq!(sum, 86);
     }

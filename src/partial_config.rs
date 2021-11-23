@@ -1,9 +1,6 @@
 use std::marker::PhantomData;
 
-use crate::{
-    semigroup::Semigroup,
-    monoid::Monoid,
-};
+use crate::{monoid::Monoid, semigroup::Semigroup};
 
 #[derive(Debug, Default)]
 pub struct Build;
@@ -117,8 +114,9 @@ impl<M: Semigroup, A> Semigroup for Select<Build, M, A> {
     fn combine(self, rhs: Self) -> Self {
         Self {
             inner: match (self.inner, rhs.inner) {
-                (Selection::Build(left), Selection::Build(right)) =>
-                    Selection::Build(left.combine(right)),
+                (Selection::Build(left), Selection::Build(right)) => {
+                    Selection::Build(left.combine(right))
+                }
                 _ => panic!("Select Build was in a wrong state to combine"),
             },
             _phantom_data: PhantomData,
@@ -176,4 +174,3 @@ macro_rules! config_builder {
         }
     };
 }
-

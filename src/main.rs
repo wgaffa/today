@@ -1,17 +1,15 @@
 use std::{
     collections::HashMap,
-    env,
+    env, fs,
     path::{Path, PathBuf},
-    fs,
 };
 
 use today::{
-    Task,
-    TaskManager,
     combine,
-    semigroup::Semigroup,
     monoid::{Last, Monoid},
-    partial_config::{Select, Build, Run},
+    partial_config::{Build, Run, Select},
+    semigroup::Semigroup,
+    Task, TaskManager,
 };
 
 mod ui;
@@ -56,13 +54,11 @@ macro_rules! env_paths {
 }
 
 fn read_env() -> anyhow::Result<AppPaths<Build>> {
-    Ok(
-        env_paths! {
-            AppPaths,
-            config as "TODAY_CONFIG_PATH" => |x| Last::from(PathBuf::from(x)),
-            data as "TODAY_DATA_PATH" => |x| Last::from(PathBuf::from(x)),
-        }
-    )
+    Ok(env_paths! {
+        AppPaths,
+        config as "TODAY_CONFIG_PATH" => |x| Last::from(PathBuf::from(x)),
+        data as "TODAY_DATA_PATH" => |x| Last::from(PathBuf::from(x)),
+    })
 }
 
 macro_rules! xdg_paths {
@@ -76,26 +72,29 @@ macro_rules! xdg_paths {
 }
 
 fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
-    let push_app_id = |mut x: PathBuf| {x.push("today"); x};
-    Ok(
-        xdg_paths! {
-            AppPaths,
-            config as dirs::config_dir() => |x| Last::from(push_app_id(x)),
-            data as dirs::data_dir() => |x| Last::from(push_app_id(x)),
-        }
-    )
+    let push_app_id = |mut x: PathBuf| {
+        x.push("today");
+        x
+    };
+    Ok(xdg_paths! {
+        AppPaths,
+        config as dirs::config_dir() => |x| Last::from(push_app_id(x)),
+        data as dirs::data_dir() => |x| Last::from(push_app_id(x)),
+    })
 }
 
 fn main() -> anyhow::Result<()> {
-    let config = combine!{
+    let config = combine! {
         AppPaths::empty() =>
             read_xdg().unwrap_or_default(),
             read_env().unwrap_or_default(),
-    }.build();
+    }
+    .build();
     println!("{:?}", config);
 
     let mut tasks = TaskManager::new();
-    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> = HashMap::new();
+    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> =
+        HashMap::new();
     dispatcher.insert(ui::MenuOption::Add, |tasks| {
         let task = ui::prompt_task()?;
         tasks.add(task);
@@ -109,9 +108,9 @@ fn main() -> anyhow::Result<()> {
     });
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
     dispatcher.insert(ui::MenuOption::Today, |tasks| {
-        tasks.today()
-            .iter()
-            .map(|&x| x.name())
+        tasks
+            .today()
+            .map(|x| x.name())
             .for_each(|x| println!("{}", x));
 
         Ok(())
@@ -144,4 +143,3 @@ fn save_tasks<P: AsRef<Path>>(tasks: &[&Task], path: P) -> anyhow::Result<()> {
     fs::write(path, &json)?;
     Ok(())
 }
-
