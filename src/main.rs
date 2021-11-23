@@ -103,7 +103,19 @@ fn main() -> anyhow::Result<()> {
     dispatcher.insert(ui::MenuOption::List, |tasks| {
         let mut tasks = tasks.iter().collect::<Vec<_>>();
         tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
-        println!("{:#?}", tasks);
+        let length = tasks.iter().map(|&x| x.name().len()).max();
+        if let Some(length) = length {
+            for task in tasks {
+                let due = task.due().map_or(String::from("ASAP"), |x| format!("{:?}", x));
+                println!(
+                    "{name:width$} {due}",
+                    name = task.name(),
+                    due = due,
+                    width = length,
+                );
+            }
+        }
+
         Ok(())
     });
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
