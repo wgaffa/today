@@ -134,14 +134,9 @@ impl TaskManager {
         self.tasks.extend_from_slice(tasks);
     }
 
-    pub fn today(&self) -> impl Iterator<Item = &Task> {
-        let today = Utc::today();
-        self.tasks
-            .iter()
-            .filter(move |&x| match x.due() {
-                None => true,
-                Some(t) => today >= t.date(),
-            })
+    /// Returns an iterator over all tasks that are due today
+    pub fn today(&self) -> Today<'_> {
+        Today::new(&self.tasks)
     }
 
     pub fn iter(&self) -> std::slice::Iter<Task> {
@@ -152,6 +147,34 @@ impl TaskManager {
 impl Default for TaskManager {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+pub struct Today<'a> {
+    slice: &'a [Task],
+    today: Date<Utc>,
+}
+
+impl<'a> Iterator for Today<'a> {
+    type Item = &'a Task;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for i in 0..self.slice.len() {
+            let is_due = self.slice[i].due().map_or(true, |x| self.today >= x.date());
+            if is_due {
+                let task = &self.slice[i];
+                self.slice = &self.slice[i + 1..];
+                return Some(task);
+            }
+        }
+
+        None
+    }
+}
+
+impl<'a> Today<'a> {
+    pub fn new(slice: &'a [Task]) -> Self {
+        Self { slice, today: Utc::today() }
     }
 }
 
