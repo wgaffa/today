@@ -12,6 +12,8 @@ use today::{
     Task, TaskManager,
 };
 
+use termion::color;
+
 mod ui;
 
 today::config!(
@@ -120,10 +122,14 @@ fn main() -> anyhow::Result<()> {
     });
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
     dispatcher.insert(ui::MenuOption::Today, |tasks| {
-        tasks
-            .today()
-            .map(|x| x.name())
-            .for_each(|x| println!("{}", x));
+        for task in tasks.today() {
+            let time = task.due().map_or(String::from("Now"), |x| x.format("%Y-%m-%d %H:%M").to_string());
+            println!("{}{:>16}{}: {}",
+                color::Fg(color::LightRed),
+                time,
+                color::Fg(color::Reset),
+                task.name());
+        }
 
         Ok(())
     });
