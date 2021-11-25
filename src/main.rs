@@ -106,7 +106,7 @@ fn main() -> anyhow::Result<()> {
         let length = tasks.iter().map(|&x| x.name().len()).max();
         if let Some(length) = length {
             for task in tasks {
-                let due = task.due().map_or(String::from("ASAP"), |x| format!("{:?}", x));
+                let due = task.due().map_or(String::from("ASAP"), |x| x.format("%Y-%m-%d %H:%M").to_string());
                 println!(
                     "{name:width$} {due}",
                     name = task.name(),
