@@ -34,6 +34,12 @@ impl TaskName {
     }
 }
 
+impl PartialEq<&str> for TaskName {
+    fn eq(&self, other: &&str) -> bool {
+        self.0 == *other
+    }
+}
+
 impl AsRef<str> for TaskName {
     fn as_ref(&self) -> &str {
         self.0.as_str()
@@ -132,6 +138,11 @@ impl TaskManager {
 
     pub fn add_range(&mut self, tasks: &[Task]) {
         self.tasks.extend_from_slice(tasks);
+    }
+
+    /// Remove a task from the list
+    pub fn remove(&mut self, name: &str) {
+        self.tasks.retain(|x| x.name != name);
     }
 
     /// Returns an iterator over all tasks that are due today

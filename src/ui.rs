@@ -15,6 +15,7 @@ use today::{Task, TaskName};
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum MenuOption {
     Add,
+    Remove,
     List,
     Quit,
     Today,
@@ -27,6 +28,7 @@ impl Display for MenuOption {
             MenuOption::List => write!(f, "List"),
             MenuOption::Quit => write!(f, "Quit"),
             MenuOption::Today => write!(f, "Today"),
+            MenuOption::Remove => write!(f, "Remove"),
         }
     }
 }
@@ -34,6 +36,7 @@ impl Display for MenuOption {
 pub fn menu() -> anyhow::Result<MenuOption> {
     let options = vec![
         MenuOption::Add,
+        MenuOption::Remove,
         MenuOption::Today,
         MenuOption::List,
         MenuOption::Quit,
@@ -60,6 +63,14 @@ pub fn prompt_task() -> anyhow::Result<Task> {
     };
 
     Ok(task)
+}
+
+pub fn prompt_task_remove<'a, T: AsRef<str>>(options: &[T]) -> anyhow::Result<&str> {
+    let selected = Select::new("Which task do you want to remove?", options.iter().map(|x| x.as_ref()).collect::<Vec<_>>())
+        .with_vim_mode(true)
+        .prompt()?;
+
+    Ok(selected)
 }
 
 fn prompt_time() -> InquireResult<NaiveTime> {

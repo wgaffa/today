@@ -102,6 +102,12 @@ fn main() -> anyhow::Result<()> {
         tasks.add(task);
         Ok(())
     });
+    dispatcher.insert(ui::MenuOption::Remove, |tasks| {
+        let options = tasks.iter().map(|x| x.name().to_owned()).collect::<Vec<_>>();
+        let task = ui::prompt_task_remove(&options)?;
+        tasks.remove(&task);
+        Ok(())
+    });
     dispatcher.insert(ui::MenuOption::List, |tasks| {
         let mut tasks = tasks.iter().collect::<Vec<_>>();
         tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
