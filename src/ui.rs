@@ -65,8 +65,8 @@ pub fn prompt_task() -> anyhow::Result<Task> {
     Ok(task)
 }
 
-pub fn prompt_task_remove<'a, T: AsRef<str>>(options: &[T]) -> anyhow::Result<&str> {
-    let selected = Select::new("Which task do you want to remove?", options.iter().map(|x| x.as_ref()).collect::<Vec<_>>())
+pub fn prompt_task_remove<T: Display + Clone>(options: &[T]) -> anyhow::Result<T> {
+    let selected = Select::new("Which task do you want to remove?", options.to_vec())
         .with_vim_mode(true)
         .prompt()?;
 
