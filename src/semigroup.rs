@@ -15,12 +15,9 @@ macro_rules! combine {
 
 impl<T: Semigroup> Semigroup for Option<T> {
     fn combine(self, rhs: Self) -> Self {
-        match self {
-            Some(left) => match rhs {
-                Some(right) => Some(left.combine(right)),
-                None => Some(left),
-            },
-            None => rhs,
+        match (self, rhs) {
+            (Some(left), Some(right)) => Some(left.combine(right)),
+            (left, right) => left.or(right),
         }
     }
 }
