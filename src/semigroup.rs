@@ -62,7 +62,16 @@ macro_rules! semigroup_default {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
     use crate::monoid::{Last, Sum};
+
+    #[test_case(Some(5), Some(7) => Some(12))]
+    #[test_case(Some(5), None => Some(5))]
+    #[test_case(None, Some(7) => Some(7))]
+    #[test_case(None, None => None)]
+    fn option_combine(left: Option<u32>, right: Option<u32>) -> Option<u32> {
+        left.combine(right)
+    }
 
     #[test]
     fn option_sum() {
