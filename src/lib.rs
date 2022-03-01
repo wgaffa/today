@@ -1,7 +1,7 @@
-pub mod task;
 pub mod partial_config;
+pub mod task;
 
-pub mod semigroup;
 pub mod monoid;
+pub mod semigroup;
 
 pub use task::*;

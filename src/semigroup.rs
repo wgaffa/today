@@ -21,7 +21,7 @@ impl<T: Semigroup> Semigroup for Option<T> {
             None => match rhs {
                 Some(right) => Some(right),
                 None => None,
-            }
+            },
         }
     }
 }
@@ -39,5 +39,5 @@ macro_rules! impl_semigroup_with_addition {
 }
 
 impl_semigroup_with_addition!(
-    usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
-
+    usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64
+);

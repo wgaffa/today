@@ -2,10 +2,10 @@ use std::{collections::HashMap, env, path::PathBuf};
 use url::Url;
 
 use today::{
-    TaskManager,
     combine,
-    semigroup::Semigroup,
     monoid::{Last, Monoid},
+    semigroup::Semigroup,
+    TaskManager,
 };
 
 use today_derive::*;
@@ -29,13 +29,11 @@ macro_rules! env_paths {
 }
 
 fn read_env() -> anyhow::Result<AppPaths> {
-    Ok(
-        env_paths! {
-            AppPaths,
-            config as "TODAY_CONFIG_PATH" => PathBuf::from,
-            data as "TODAY_DATA_PATH" => PathBuf::from,
-        }
-    )
+    Ok(env_paths! {
+        AppPaths,
+        config as "TODAY_CONFIG_PATH" => PathBuf::from,
+        data as "TODAY_DATA_PATH" => PathBuf::from,
+    })
 }
 
 macro_rules! xdg_paths {
@@ -49,18 +47,19 @@ macro_rules! xdg_paths {
 }
 
 fn read_xdg() -> anyhow::Result<AppPaths> {
-    let push_app_id = |mut x: PathBuf| {x.push("today"); x};
-    Ok(
-        xdg_paths! {
-            AppPaths,
-            config as dirs::config_dir() => push_app_id,
-            data as dirs::data_dir() => push_app_id,
-        }
-    )
+    let push_app_id = |mut x: PathBuf| {
+        x.push("today");
+        x
+    };
+    Ok(xdg_paths! {
+        AppPaths,
+        config as dirs::config_dir() => push_app_id,
+        data as dirs::data_dir() => push_app_id,
+    })
 }
 
 fn main() -> anyhow::Result<()> {
-    let config = combine!{
+    let config = combine! {
         AppPaths::empty() =>
             read_xdg().unwrap_or_default(),
             read_env().unwrap_or_default(),
@@ -72,7 +71,8 @@ fn main() -> anyhow::Result<()> {
     println!("{:?}", path);
 
     let mut tasks = TaskManager::new();
-    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> = HashMap::new();
+    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> =
+        HashMap::new();
     dispatcher.insert(ui::MenuOption::Add, |tasks| {
         let task = ui::prompt_task()?;
         tasks.add(task);
@@ -98,4 +98,3 @@ fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-
