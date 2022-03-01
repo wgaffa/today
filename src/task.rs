@@ -1,34 +1,83 @@
 use chrono::prelude::*;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize)]
+use std::convert::AsRef;
+
+/// `TaskName` is a any non empty string with at least one printable character with surrounding
+/// whitespaces trimmed. `TaskName` is compared case insensitive.
+/// ```
+/// use today::task::TaskName;
+///
+/// let name = TaskName::new("  Leading and trailing whitespaces\t").unwrap();
+///
+/// assert_eq!(name.as_str(), "Leading and trailing whitespaces");
+/// ```
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+pub struct TaskName(String);
+
+impl TaskName {
+    pub fn new(value: &str) -> Option<Self> {
+        let value = value.trim();
+        if value.is_empty() {
+            None
+        } else {
+            Some(Self(value.to_owned()))
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        self.0.as_str()
+    }
+
+    pub fn into_inner(self) -> String {
+        self.0
+    }
+}
+
+impl PartialEq<&str> for TaskName {
+    fn eq(&self, other: &&str) -> bool {
+        self.0 == *other
+    }
+}
+
+impl AsRef<str> for TaskName {
+    fn as_ref(&self) -> &str {
+        self.0.as_str()
+    }
+}
+
+impl AsRef<String> for TaskName {
+    fn as_ref(&self) -> &String {
+        &self.0
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Task {
-    name: String,
+    name: TaskName,
     due: Option<DateTime<Utc>>,
 }
 
 impl Task {
     /// Create a new task with given name
     /// ```
-    /// use today::Task;
+    /// use today::{Task, TaskName};
     ///
-    /// let task = Task::new("Meet Dave");
+    /// let task = Task::new(TaskName::new("Meet Dave").unwrap());
     ///
     /// assert_eq!(task.name(), "Meet Dave");
     /// ```
-    pub fn new<T: Into<String>>(name: T) -> Self {
-        Self {
-            name: name.into(),
-            due: None,
-        }
+    pub fn new(name: TaskName) -> Self {
+        Self { name, due: None }
     }
 
     /// Add a due date in UTC for a task
     /// ```
-    /// use today::Task;
+    /// use today::{Task, TaskName};
     /// use chrono::prelude::*;
     ///
-    /// let task = Task::new("Meet Dave").with_date(Utc.ymd(2020, 2, 23));
+    /// let task = Task::new(TaskName::new("Meet Dave").unwrap())
+    ///     .with_date(Utc.ymd(2020, 2, 23));
     ///
     /// assert_eq!(task.due(), Some(&Utc.ymd(2020, 2, 23).and_hms(0, 0, 0)));
     /// ```
@@ -39,10 +88,12 @@ impl Task {
 
     /// Add a due date and time in UTC for a task
     /// ```
-    /// use today::Task;
+    /// use today::{Task, TaskName};
     /// use chrono::prelude::*;
     ///
-    /// let task = Task::new("Meet Dave").with_date_time(Utc.ymd(2020, 2, 23).and_hms(15, 30, 00));
+    /// let task = Task::new(TaskName::new("Meet Dave").unwrap())
+    ///     .with_date_time(Utc.ymd(2020, 2, 23)
+    ///     .and_hms(15, 30, 00));
     ///
     /// assert_eq!(task.due(), Some(&Utc.ymd(2020, 2, 23).and_hms(15, 30, 00)));
     /// ```
@@ -60,7 +111,7 @@ impl Task {
 
     /// Get the name of the task
     pub fn name(&self) -> &str {
-        &self.name
+        self.name.0.as_str()
     }
 
     /// Get the date of the task.
@@ -85,7 +136,69 @@ impl TaskManager {
         self.tasks.push(task);
     }
 
+    pub fn add_range(&mut self, tasks: &[Task]) {
+        self.tasks.extend_from_slice(tasks);
+    }
+
+    /// Remove a task from the list
+    pub fn remove(&mut self, name: &str) {
+        self.tasks.retain(|x| x.name != name);
+    }
+
+    /// Returns an iterator over all tasks that are due today
+    pub fn today(&self) -> Today<'_> {
+        Today::new(&self.tasks)
+    }
+
     pub fn iter(&self) -> std::slice::Iter<Task> {
         self.tasks.iter()
+    }
+}
+
+impl Default for TaskManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+pub struct Today<'a> {
+    slice: &'a [Task],
+    today: Date<Utc>,
+}
+
+impl<'a> Iterator for Today<'a> {
+    type Item = &'a Task;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for i in 0..self.slice.len() {
+            let is_due = self.slice[i].due().map_or(true, |x| self.today >= x.date());
+            if is_due {
+                let task = &self.slice[i];
+                self.slice = &self.slice[i + 1..];
+                return Some(task);
+            }
+        }
+
+        None
+    }
+}
+
+impl<'a> Today<'a> {
+    pub fn new(slice: &'a [Task]) -> Self {
+        Self { slice, today: Utc::today() }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use test_case::test_case;
+
+    #[test_case("" => None)]
+    #[test_case("  leading" => Some(TaskName("leading".to_string())))]
+    #[test_case("trailing "  => Some(TaskName("trailing".to_string())))]
+    #[test_case("   mixed\n "  => Some(TaskName("mixed".to_string())))]
+    fn new_taskname(input: &str) -> Option<TaskName> {
+        TaskName::new(input)
     }
 }

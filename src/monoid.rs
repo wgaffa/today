@@ -1,3 +1,4 @@
+use std::marker::PhantomData;
 use today_derive::*;
 
 use crate::semigroup::Semigroup;
@@ -12,8 +13,14 @@ impl<T: Semigroup> Monoid for Option<T> {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct Last<T>(pub Option<T>);
+
+impl<T> Default for Last<T> {
+    fn default() -> Self {
+        Self(None)
+    }
+}
 
 impl<T> From<T> for Last<T> {
     fn from(value: T) -> Self {
@@ -45,7 +52,7 @@ impl<T> Monoid for Last<T> {
     }
 }
 
-#[derive(Debug, Default, Semigroup, Monoid, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Semigroup, Monoid, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Sum<T>(pub T);
 
 impl<T: PartialEq> PartialEq<T> for Sum<T> {
@@ -94,6 +101,27 @@ macro_rules! impl_monoid_for_default {
 }
 
 impl_monoid_for_default!(usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64);
+
+impl<T> Monoid for PhantomData<T> {
+    fn empty() -> Self {
+        Self
+    }
+}
+
+#[macro_export]
+macro_rules! monoid_default {
+    ($t:ty : $($i:ident),*) => {
+        impl Monoid for $t {
+            fn empty() -> Self {
+                Self {
+                    $(
+                        $i: Monoid::empty(),
+                    )*
+                }
+            }
+        }
+    };
+}
 
 #[cfg(test)]
 mod tests {

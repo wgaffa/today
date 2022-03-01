@@ -12,13 +12,16 @@ use inquire::{
 };
 use std::fmt::Display;
 
-use today::Task;
+use today::{Task, TaskName};
 
+#[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum MenuOption {
     Add,
+    Remove,
     List,
     Quit,
+    Today,
 }
 
 impl Display for MenuOption {
@@ -27,17 +30,23 @@ impl Display for MenuOption {
             MenuOption::Add => write!(f, "Add"),
             MenuOption::List => write!(f, "List"),
             MenuOption::Quit => write!(f, "Quit"),
+            MenuOption::Today => write!(f, "Today"),
+            MenuOption::Remove => write!(f, "Remove"),
         }
     }
 }
 
 pub fn menu() -> anyhow::Result<MenuOption> {
-    let options = vec![MenuOption::Add, MenuOption::List, MenuOption::Quit];
+    let options = vec![
+        MenuOption::Add,
+        MenuOption::Remove,
+        MenuOption::Today,
+        MenuOption::List,
+        MenuOption::Quit,
+    ];
     let selected = Select::new("What do you wish to do?", options)
         .with_vim_mode(true)
         .prompt()?;
-
-    println!("{:?}", selected);
 
     Ok(selected)
 }
@@ -47,7 +56,7 @@ pub fn prompt_task() -> anyhow::Result<Task> {
 
     let due = prompt_due()?;
 
-    let task = Task::new(name);
+    let task = Task::new(TaskName::new(&name).unwrap());
     let task = if let Some(date) = due {
         let time = prompt_time()?;
         let due = date.and_time(time);
@@ -57,6 +66,14 @@ pub fn prompt_task() -> anyhow::Result<Task> {
     };
 
     Ok(task)
+}
+
+pub fn prompt_task_remove<T: Display + Clone>(options: &[T]) -> anyhow::Result<T> {
+    let selected = Select::new("Which task do you want to remove?", options.to_vec())
+        .with_vim_mode(true)
+        .prompt()?;
+
+    Ok(selected)
 }
 
 fn prompt_time() -> InquireResult<NaiveTime> {
