@@ -1,15 +1,19 @@
 use std::{
     collections::HashMap,
-    env, fs,
+    env,
+    fs,
     path::{Path, PathBuf},
 };
+
+use anyhow::Context;
 
 use today::{
     combine,
     monoid::{Last, Monoid},
     partial_config::{Build, Run, Select},
     semigroup::Semigroup,
-    Task, TaskManager,
+    Task,
+    TaskManager,
 };
 
 use termion::color;
@@ -55,19 +59,11 @@ macro_rules! env_paths {
     };
 }
 
-<<<<<<< HEAD
-fn read_env() -> anyhow::Result<AppPaths> {
-    Ok(env_paths! {
-        AppPaths,
-        config as "TODAY_CONFIG_PATH" => PathBuf::from,
-        data as "TODAY_DATA_PATH" => PathBuf::from,
-=======
 fn read_env() -> anyhow::Result<AppPaths<Build>> {
     Ok(env_paths! {
         AppPaths,
         config as "TODAY_CONFIG_PATH" => |x| Last::from(PathBuf::from(x)),
         data as "TODAY_DATA_PATH" => |x| Last::from(PathBuf::from(x)),
->>>>>>> bdbf8474c5b4d1eda31441e1ad43c146b0f24aab
     })
 }
 
@@ -81,24 +77,15 @@ macro_rules! xdg_paths {
     )
 }
 
-<<<<<<< HEAD
-fn read_xdg() -> anyhow::Result<AppPaths> {
-=======
 fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
->>>>>>> bdbf8474c5b4d1eda31441e1ad43c146b0f24aab
     let push_app_id = |mut x: PathBuf| {
         x.push("today");
         x
     };
     Ok(xdg_paths! {
         AppPaths,
-<<<<<<< HEAD
-        config as dirs::config_dir() => push_app_id,
-        data as dirs::data_dir() => push_app_id,
-=======
         config as dirs::config_dir() => |x| Last::from(push_app_id(x)),
         data as dirs::data_dir() => |x| Last::from(push_app_id(x)),
->>>>>>> bdbf8474c5b4d1eda31441e1ad43c146b0f24aab
     })
 }
 
@@ -120,7 +107,10 @@ fn main() -> anyhow::Result<()> {
         Ok(())
     });
     dispatcher.insert(ui::MenuOption::Remove, |tasks| {
-        let options = tasks.iter().map(|x| x.name().to_owned()).collect::<Vec<_>>();
+        let options = tasks
+            .iter()
+            .map(|x| x.name().to_owned())
+            .collect::<Vec<_>>();
         let task = ui::prompt_task_remove(&options)?;
         tasks.remove(&task);
         Ok(())
@@ -131,7 +121,9 @@ fn main() -> anyhow::Result<()> {
         let length = tasks.iter().map(|&x| x.name().len()).max();
         if let Some(length) = length {
             for task in tasks {
-                let due = task.due().map_or(String::from("ASAP"), |x| x.format("%Y-%m-%d %H:%M").to_string());
+                let due = task.due().map_or(String::from("ASAP"), |x| {
+                    x.format("%Y-%m-%d %H:%M").to_string()
+                });
                 println!(
                     "{name:width$} {due}",
                     name = task.name(),
@@ -146,12 +138,16 @@ fn main() -> anyhow::Result<()> {
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
     dispatcher.insert(ui::MenuOption::Today, |tasks| {
         for task in tasks.today() {
-            let time = task.due().map_or(String::from("Now"), |x| x.format("%Y-%m-%d %H:%M").to_string());
-            println!("{}{:>16}{}: {}",
+            let time = task.due().map_or(String::from("Now"), |x| {
+                x.format("%Y-%m-%d %H:%M").to_string()
+            });
+            println!(
+                "{}{:>16}{}: {}",
                 color::Fg(color::LightRed),
                 time,
                 color::Fg(color::Reset),
-                task.name());
+                task.name()
+            );
         }
 
         Ok(())
@@ -160,7 +156,11 @@ fn main() -> anyhow::Result<()> {
     let mut task_path = config.data.value().to_owned();
     task_path.push("tasks.json");
 
-    let file_content = fs::read_to_string(&task_path)?;
+    let file_content = fs::read_to_string(&task_path).context(format!(
+        "error reading '{}'",
+        task_path.to_str().unwrap_or_default()
+    ))?;
+
     let db = serde_json::from_str::<Vec<Task>>(&file_content)?;
     tasks.add_range(&db);
 
@@ -178,12 +178,9 @@ fn main() -> anyhow::Result<()> {
 
     Ok(())
 }
-<<<<<<< HEAD
-=======
 
 fn save_tasks<P: AsRef<Path>>(tasks: &[&Task], path: P) -> anyhow::Result<()> {
     let json = serde_json::to_string(tasks)?;
     fs::write(path, &json)?;
     Ok(())
 }
->>>>>>> bdbf8474c5b4d1eda31441e1ad43c146b0f24aab
