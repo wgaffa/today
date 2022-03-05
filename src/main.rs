@@ -112,8 +112,14 @@ fn main() -> anyhow::Result<()> {
             .iter()
             .map(|x| x.name().to_owned())
             .collect::<Vec<_>>();
-        let task = ui::prompt_task_remove(&options)?;
-        tasks.remove(&task);
+
+        if !options.is_empty() {
+            let task = ui::prompt_task_remove(&options)?;
+            if let Some(task) = task {
+                tasks.remove(&task);
+            }
+        }
+
         Ok(())
     });
     dispatcher.insert(ui::MenuOption::List, |tasks| {

@@ -68,10 +68,10 @@ pub fn prompt_task() -> anyhow::Result<Task> {
     Ok(task)
 }
 
-pub fn prompt_task_remove<T: Display + Clone>(options: &[T]) -> anyhow::Result<T> {
+pub fn prompt_task_remove<T: Display + Clone>(options: &[T]) -> anyhow::Result<Option<T>> {
     let selected = Select::new("Which task do you want to remove?", options.to_vec())
         .with_vim_mode(true)
-        .prompt()?;
+        .prompt_skippable()?;
 
     Ok(selected)
 }
