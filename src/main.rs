@@ -186,6 +186,20 @@ fn main() -> anyhow::Result<()> {
 
 fn save_tasks<P: AsRef<Path>>(tasks: &[&Task], path: P) -> anyhow::Result<()> {
     let json = serde_json::to_string(tasks)?;
+    let directory = path
+        .as_ref()
+        .parent()
+        .expect("Expected a directory for the file");
+
+    if let Err(err) = fs::metadata(directory) {
+        if err.kind() == ErrorKind::NotFound {
+            fs::create_dir_all(directory).context(format!(
+                "Could not create directory '{}'",
+                directory.to_str().unwrap_or_default()
+            ))?
+        }
+    }
+
     fs::write(path, &json)?;
     Ok(())
 }
