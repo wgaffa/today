@@ -176,7 +176,7 @@ fn main() -> anyhow::Result<()> {
 
         if option == ui::MenuOption::Quit {
             let db = tasks.iter().collect::<Vec<_>>();
-            save_tasks(&db, &task_path)?;
+            save_tasks(&db, &task_path).context(format!("Could not save to file '{}'", task_path.to_str().unwrap_or_default()))?;
             break;
         }
     }
@@ -197,6 +197,8 @@ fn save_tasks<P: AsRef<Path>>(tasks: &[&Task], path: P) -> anyhow::Result<()> {
                 "Could not create directory '{}'",
                 directory.to_str().unwrap_or_default()
             ))?
+        } else {
+            anyhow::bail!(err)
         }
     }
 
