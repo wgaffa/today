@@ -182,7 +182,10 @@ fn main() -> anyhow::Result<()> {
 
         if option == ui::MenuOption::Quit {
             let db = tasks.iter().collect::<Vec<_>>();
-            save_tasks(&db, &task_path).context(format!("Could not save to file '{}'", task_path.to_str().unwrap_or_default()))?;
+            save_tasks(&db, &task_path).context(format!(
+                "Could not save to file '{}'",
+                task_path.to_str().unwrap_or_default()
+            ))?;
             break;
         }
     }
