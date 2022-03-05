@@ -5,7 +5,7 @@ use crate::{
     semigroup::Semigroup,
 };
 
-use today_derive::{Monoid, Semigroup};
+use today_derive::Semigroup;
 
 #[derive(Debug, Default)]
 pub struct Build;

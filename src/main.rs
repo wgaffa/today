@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     env,
     fs,
+    io::ErrorKind,
     path::{Path, PathBuf},
 };
 
@@ -156,10 +157,14 @@ fn main() -> anyhow::Result<()> {
     let mut task_path = config.data.value().to_owned();
     task_path.push("tasks.json");
 
-    let file_content = fs::read_to_string(&task_path).context(format!(
-        "error reading '{}'",
-        task_path.to_str().unwrap_or_default()
-    ))?;
+    let file_content = match fs::read_to_string(&task_path) {
+        Err(err) if err.kind() == ErrorKind::NotFound => Ok(String::from("[]")),
+        Err(err) => Err(err).context(format!(
+            "Could not open file '{}'",
+            task_path.to_str().unwrap_or_default()
+        )),
+        Ok(ok) => Ok(ok), // This basicly just converts from Result<T, io::Error> to an anyhow Result
+    }?;
 
     let db = serde_json::from_str::<Vec<Task>>(&file_content)?;
     tasks.add_range(&db);
