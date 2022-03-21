@@ -17,9 +17,8 @@ use today::{
     TaskManager,
 };
 
-use termion::color;
-
 mod ui;
+mod commands;
 
 today::config!(
     derive(Debug, Default)
@@ -102,63 +101,11 @@ fn main() -> anyhow::Result<()> {
     let mut tasks = TaskManager::new();
     let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> =
         HashMap::new();
-    dispatcher.insert(ui::MenuOption::Add, |tasks| {
-        let task = ui::prompt_task()?;
-        tasks.add(task);
-        Ok(())
-    });
-    dispatcher.insert(ui::MenuOption::Remove, |tasks| {
-        let options = tasks
-            .iter()
-            .map(|x| x.name().to_owned())
-            .collect::<Vec<_>>();
-
-        if !options.is_empty() {
-            let task = ui::prompt_task_remove(&options)?;
-            if let Some(task) = task {
-                tasks.remove(&task);
-            }
-        }
-
-        Ok(())
-    });
-    dispatcher.insert(ui::MenuOption::List, |tasks| {
-        let mut tasks = tasks.iter().collect::<Vec<_>>();
-        tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
-        let length = tasks.iter().map(|&x| x.name().len()).max();
-        if let Some(length) = length {
-            for task in tasks {
-                let due = task.due().map_or(String::from("ASAP"), |x| {
-                    x.format("%Y-%m-%d %H:%M").to_string()
-                });
-                println!(
-                    "{name:width$} {due}",
-                    name = task.name(),
-                    due = due,
-                    width = length,
-                );
-            }
-        }
-
-        Ok(())
-    });
+    dispatcher.insert(ui::MenuOption::Add, commands::add);
+    dispatcher.insert(ui::MenuOption::Remove, commands::remove);
+    dispatcher.insert(ui::MenuOption::List, commands::list);
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
-    dispatcher.insert(ui::MenuOption::Today, |tasks| {
-        for task in tasks.today() {
-            let time = task.due().map_or(String::from("Now"), |x| {
-                x.format("%Y-%m-%d %H:%M").to_string()
-            });
-            println!(
-                "{}{:>16}{}: {}",
-                color::Fg(color::LightRed),
-                time,
-                color::Fg(color::Reset),
-                task.name()
-            );
-        }
-
-        Ok(())
-    });
+    dispatcher.insert(ui::MenuOption::Today, commands::today);
 
     let mut task_path = config.data.value().to_owned();
     task_path.push("tasks.json");
