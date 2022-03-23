@@ -101,8 +101,8 @@ fn main() -> anyhow::Result<()> {
     let mut tasks = TaskManager::new();
     let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> =
         HashMap::new();
-    dispatcher.insert(ui::MenuOption::Add, commands::add);
-    dispatcher.insert(ui::MenuOption::Remove, commands::remove);
+    dispatcher.insert(ui::MenuOption::Add, |x| commands::add(ui::prompt_task, x));
+    dispatcher.insert(ui::MenuOption::Remove, |x| commands::remove(ui::prompt_task_remove, x));
     dispatcher.insert(ui::MenuOption::List, commands::list);
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
     dispatcher.insert(ui::MenuOption::Today, commands::today);

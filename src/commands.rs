@@ -1,22 +1,27 @@
 use termion::color;
 
-use crate::TaskManager;
-use crate::ui;
+use crate::{TaskManager, Task};
 
-pub fn add(tasks: &mut TaskManager) -> anyhow::Result<()> {
-    let task = ui::prompt_task()?;
+pub fn add<F>(input: F, tasks: &mut TaskManager) -> anyhow::Result<()>
+where
+    F: Fn() -> anyhow::Result<Task>
+{
+    let task = input()?;
     tasks.add(task);
     Ok(())
 }
 
-pub fn remove(tasks: &mut TaskManager) -> anyhow::Result<()> {
+pub fn remove<F>(input: F, tasks: &mut TaskManager) -> anyhow::Result<()>
+where
+    F: Fn(&[String]) -> anyhow::Result<Option<String>>
+{
     let options = tasks
         .iter()
         .map(|x| x.name().to_owned())
         .collect::<Vec<_>>();
 
     if !options.is_empty() {
-        let task = ui::prompt_task_remove(&options)?;
+        let task = input(&options)?;
         if let Some(task) = task {
             tasks.remove(&task);
         }
