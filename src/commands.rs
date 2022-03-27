@@ -1,8 +1,8 @@
 use termion::color;
 
-use crate::{TaskManager, Task};
+use crate::{TaskList, Task};
 
-pub fn add<F>(input: F, tasks: &mut TaskManager) -> anyhow::Result<()>
+pub fn add<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
 where
     F: Fn() -> anyhow::Result<Task>
 {
@@ -11,7 +11,7 @@ where
     Ok(())
 }
 
-pub fn remove<F>(input: F, tasks: &mut TaskManager) -> anyhow::Result<()>
+pub fn remove<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
 where
     F: Fn(&[String]) -> anyhow::Result<Option<String>>
 {
@@ -30,7 +30,7 @@ where
     Ok(())
 }
 
-pub fn list(tasks: &mut TaskManager) -> anyhow::Result<()> {
+pub fn list(tasks: &mut TaskList) -> anyhow::Result<()> {
     let mut tasks = tasks.iter().collect::<Vec<_>>();
     tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
     let length = tasks.iter().map(|&x| x.name().len()).max();
@@ -51,7 +51,7 @@ pub fn list(tasks: &mut TaskManager) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn today(tasks: &mut TaskManager) -> anyhow::Result<()> {
+pub fn today(tasks: &mut TaskList) -> anyhow::Result<()> {
     for task in tasks.today() {
         let time = task.due().map_or(String::from("Now"), |x| {
             x.format("%Y-%m-%d %H:%M").to_string()

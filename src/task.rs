@@ -123,11 +123,11 @@ impl Task {
 }
 
 #[derive(Debug)]
-pub struct TaskManager {
+pub struct TaskList {
     tasks: Vec<Task>,
 }
 
-impl TaskManager {
+impl TaskList {
     pub fn new() -> Self {
         Self { tasks: Vec::new() }
     }
@@ -155,7 +155,7 @@ impl TaskManager {
     }
 }
 
-impl Default for TaskManager {
+impl Default for TaskList {
     fn default() -> Self {
         Self::new()
     }

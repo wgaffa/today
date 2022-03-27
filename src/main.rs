@@ -14,7 +14,7 @@ use today::{
     partial_config::{Build, Run, Select},
     semigroup::Semigroup,
     Task,
-    TaskManager,
+    TaskList,
 };
 
 mod ui;
@@ -98,8 +98,8 @@ fn main() -> anyhow::Result<()> {
     .build();
     println!("{:?}", config);
 
-    let mut tasks = TaskManager::new();
-    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskManager) -> anyhow::Result<()>> =
+    let mut tasks = TaskList::new();
+    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskList) -> anyhow::Result<()>> =
         HashMap::new();
     dispatcher.insert(ui::MenuOption::Add, |x| commands::add(ui::prompt_task, x));
     dispatcher.insert(ui::MenuOption::Remove, |x| commands::remove(ui::prompt_task_remove, x));
