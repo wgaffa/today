@@ -129,7 +129,7 @@ impl Task {
     /// Add a time to the task if date has been set first.
     /// If `due` is None then this has no effect
     pub fn and_time(mut self, time: NaiveTime) -> Self {
-        self.due = self.due.map(|x| x.date().and_time(time)).flatten();
+        self.due = self.due.and_then(|x| x.date().and_time(time));
         self
     }
 
@@ -209,7 +209,10 @@ impl<'a> Iterator for Today<'a> {
 
 impl<'a> Today<'a> {
     pub fn new(slice: &'a [Task]) -> Self {
-        Self { slice, today: Utc::today() }
+        Self {
+            slice,
+            today: Utc::today(),
+        }
     }
 }
 
