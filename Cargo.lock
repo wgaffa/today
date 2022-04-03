@@ -349,6 +349,7 @@ dependencies = [
  "test-case",
  "today_derive",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -402,6 +403,16 @@ dependencies = [
  "idna",
  "matches",
  "percent-encoding",
+ "serde",
+]
+
+[[package]]
+name = "uuid"
+version = "0.8.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc5cf98d8186244414c848017f0e2676b3fcb46807f6668a97dfe67359a3c4b7"
+dependencies = [
+ "getrandom",
  "serde",
 ]
 

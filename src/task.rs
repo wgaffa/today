@@ -1,7 +1,8 @@
+use std::convert::AsRef;
+
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
-
-use std::convert::AsRef;
+use uuid::Uuid;
 
 /// `TaskName` is a any non empty string with at least one printable character with surrounding
 /// whitespaces trimmed. `TaskName` is compared case insensitive.
@@ -13,6 +14,7 @@ use std::convert::AsRef;
 /// assert_eq!(name.as_str(), "Leading and trailing whitespaces");
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[serde(transparent)]
 pub struct TaskName(String);
 
 impl TaskName {
@@ -52,8 +54,26 @@ impl AsRef<String> for TaskName {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(transparent)]
+pub struct TaskId(Uuid);
+
+impl TaskId {
+    pub fn new() -> Self {
+        Self(Uuid::new_v4())
+    }
+}
+
+impl Default for TaskId {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct Task {
+    #[serde(default)]
+    id: TaskId,
     name: TaskName,
     due: Option<DateTime<Utc>>,
 }
@@ -68,7 +88,11 @@ impl Task {
     /// assert_eq!(task.name(), "Meet Dave");
     /// ```
     pub fn new(name: TaskName) -> Self {
-        Self { name, due: None }
+        Self {
+            id: Default::default(),
+            name,
+            due: None,
+        }
     }
 
     /// Add a due date in UTC for a task
