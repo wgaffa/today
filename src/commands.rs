@@ -15,17 +15,17 @@ where
 
 pub fn remove<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
 where
-    F: Fn(&[String]) -> anyhow::Result<Option<String>>
+    F: Fn(&[Task]) -> anyhow::Result<Option<Task>>,
 {
     let options = tasks
         .iter()
-        .map(|x| x.name().to_owned())
+        .cloned()
         .collect::<Vec<_>>();
 
     if !options.is_empty() {
         let task = input(&options)?;
         if let Some(task) = task {
-            tasks.remove(&task);
+            tasks.remove(task.id());
         }
     }
 
@@ -91,4 +91,3 @@ pub fn today(tasks: &mut TaskList) -> anyhow::Result<()> {
 
     Ok(())
 }
-

@@ -2,7 +2,7 @@ use anyhow::Error;
 use chrono::prelude::*;
 use inquire::{
     error::{InquireError, InquireResult},
-    formatter::StringFormatter,
+    formatter::{StringFormatter, OptionFormatter},
     ui::{RenderConfig, Styled},
     validator::StringValidator,
     CustomType,
@@ -68,9 +68,11 @@ pub fn prompt_task() -> anyhow::Result<Task> {
     Ok(task)
 }
 
-pub fn prompt_task_remove<T: Display + Clone>(options: &[T]) -> anyhow::Result<Option<T>> {
+pub fn prompt_task_remove(options: &[Task]) -> anyhow::Result<Option<Task>> {
+    let formatter: OptionFormatter<Task> = &|x| x.value.name().to_owned();
     let selected = Select::new("Which task do you want to remove?", options.to_vec())
         .with_vim_mode(true)
+        .with_formatter(formatter)
         .prompt_skippable()?;
 
     Ok(selected)

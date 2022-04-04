@@ -15,7 +15,14 @@ use uuid::Uuid;
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(transparent)]
+#[repr(transparent)]
 pub struct TaskName(String);
+
+impl std::fmt::Display for TaskName {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl TaskName {
     pub fn new(value: &str) -> Option<Self> {
@@ -57,6 +64,12 @@ impl AsRef<String> for TaskName {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(transparent)]
 pub struct TaskId(Uuid);
+
+impl std::fmt::Display for TaskId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
 
 impl TaskId {
     pub fn new() -> Self {
@@ -157,6 +170,15 @@ impl Task {
     }
 }
 
+impl std::fmt::Display for Task {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let id = &self.id;
+        let name = &self.name;
+        let date = self.due.map_or(String::from("ASAP"), |x| x.format("%Y-%m-%d %H:%M").to_string());
+        write!(f, "{id} {name} {date}")
+    }
+}
+
 #[derive(Debug)]
 pub struct TaskList {
     tasks: Vec<Task>,
@@ -176,8 +198,8 @@ impl TaskList {
     }
 
     /// Remove a task from the list
-    pub fn remove(&mut self, name: &str) {
-        self.tasks.retain(|x| x.name != name);
+    pub fn remove(&mut self, task_id: &TaskId) {
+        self.tasks.retain(|x| x.id != *task_id);
     }
 
     /// Returns an iterator over all tasks that are due today
