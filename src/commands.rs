@@ -2,11 +2,11 @@ use std::borrow::Borrow;
 
 use termion::color;
 
-use crate::{TaskList, Task};
+use crate::{Task, TaskList};
 
 pub fn add<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
 where
-    F: Fn() -> anyhow::Result<Task>
+    F: Fn() -> anyhow::Result<Task>,
 {
     let task = input()?;
     tasks.add(task);
