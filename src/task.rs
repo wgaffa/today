@@ -172,10 +172,9 @@ impl Task {
 
 impl std::fmt::Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let id = &self.id;
         let name = &self.name;
         let date = self.due.map_or(String::from("ASAP"), |x| x.format("%Y-%m-%d %H:%M").to_string());
-        write!(f, "{id} {name} {date}")
+        write!(f, "{name} {date}")
     }
 }
 
