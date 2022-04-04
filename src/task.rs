@@ -64,6 +64,12 @@ impl TaskId {
     }
 }
 
+impl std::borrow::Borrow<Uuid> for TaskId {
+    fn borrow(&self) -> &Uuid {
+        &self.0
+    }
+}
+
 impl Default for TaskId {
     fn default() -> Self {
         Self::new()
@@ -143,6 +149,11 @@ impl Task {
     /// None represents a task to be done as soon as possible
     pub fn due(&self) -> Option<&DateTime<Utc>> {
         self.due.as_ref()
+    }
+
+    /// Get the id of the task.
+    pub fn id(&self) -> &TaskId {
+        &self.id
     }
 }
 

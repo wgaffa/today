@@ -7,6 +7,7 @@ use std::{
 };
 
 use anyhow::Context;
+use clap::{command, Command};
 
 use today::{
     combine,
@@ -90,6 +91,13 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
 }
 
 fn main() -> anyhow::Result<()> {
+    let matches = command!()
+        .about("Manage tasks to do today")
+        .subcommand(
+            Command::new("list")
+                .about("List all tasks"))
+        .get_matches();
+       
     let config = combine! {
         AppPaths::empty() =>
             read_xdg().unwrap_or_default(),
@@ -98,15 +106,21 @@ fn main() -> anyhow::Result<()> {
     .build();
     println!("{:?}", config);
 
-    let mut tasks = TaskList::new();
-    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskList) -> anyhow::Result<()>> =
-        HashMap::new();
-    dispatcher.insert(ui::MenuOption::Add, |x| commands::add(ui::prompt_task, x));
-    dispatcher.insert(ui::MenuOption::Remove, |x| commands::remove(ui::prompt_task_remove, x));
-    dispatcher.insert(ui::MenuOption::List, commands::list);
-    dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
-    dispatcher.insert(ui::MenuOption::Today, commands::today);
+    let tasks = load_tasks(&config)?;
+    match matches.subcommand() {
+        Some(("list", _sub_matches)) => {
+            // Call a list function to list all tasks with their id's
+            commands::list_with_ids(&tasks)?;
+        },
+        _ => {
+            interactive(config, tasks)?;
+        }
+    }
 
+    Ok(())
+}
+
+fn load_tasks(config: &AppPaths<Run>) -> anyhow::Result<TaskList> {
     let mut task_path = config.data.value().to_owned();
     task_path.push("tasks.json");
 
@@ -120,7 +134,23 @@ fn main() -> anyhow::Result<()> {
     }?;
 
     let db = serde_json::from_str::<Vec<Task>>(&file_content)?;
+    let mut tasks = TaskList::new();
     tasks.add_range(&db);
+
+    Ok(tasks)
+}
+
+fn interactive(config: AppPaths<Run>, mut tasks: TaskList) -> anyhow::Result<()> {
+    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskList) -> anyhow::Result<()>> =
+        HashMap::new();
+    dispatcher.insert(ui::MenuOption::Add, |x| commands::add(ui::prompt_task, x));
+    dispatcher.insert(ui::MenuOption::Remove, |x| commands::remove(ui::prompt_task_remove, x));
+    dispatcher.insert(ui::MenuOption::List, commands::list);
+    dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
+    dispatcher.insert(ui::MenuOption::Today, commands::today);
+
+    let mut task_path = config.data.value().to_owned();
+    task_path.push("tasks.json");
 
     loop {
         let option = ui::menu()?;
