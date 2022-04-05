@@ -91,13 +91,8 @@ fn shortest_id_length(min_length: usize, tasks: &[&Task]) -> usize {
     let mut current_length = 0;
     for row in 0..rows {
         let mut column = String::new();
-        for col in 0..columns {
-            column.push(
-                ids[col]
-                    .chars()
-                    .nth(row)
-                    .expect("Unexpected code point in id"),
-            );
+        for id in ids.iter() {
+            column.push(id.chars().nth(row).expect("Unexpected code point in id"));
         }
         let column = column.chars().sorted().dedup().count();
         if column == columns {
