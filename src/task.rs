@@ -77,8 +77,8 @@ impl TaskId {
     }
 }
 
-impl std::borrow::Borrow<Uuid> for TaskId {
-    fn borrow(&self) -> &Uuid {
+impl std::convert::AsRef<Uuid> for TaskId {
+    fn as_ref(&self) -> &Uuid {
         &self.0
     }
 }
