@@ -16,10 +16,7 @@ pub fn remove<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
 where
     F: Fn(&[Task]) -> anyhow::Result<Option<Task>>,
 {
-    let options = tasks
-        .iter()
-        .cloned()
-        .collect::<Vec<_>>();
+    let options = tasks.iter().cloned().collect::<Vec<_>>();
 
     if !options.is_empty() {
         let task = input(&options)?;
