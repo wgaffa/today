@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::Context;
-use clap::{command, Command};
+use clap::{command, Arg, Command};
 
 use today::{
     combine,
@@ -93,11 +93,19 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
 fn main() -> anyhow::Result<()> {
     let matches = command!()
         .about("Manage tasks to do today")
+        .subcommand(Command::new("list").about("List all tasks"))
         .subcommand(
-            Command::new("list")
-                .about("List all tasks"))
+            Command::new("remove")
+                .arg(
+                    Arg::new("id")
+                        .required(true)
+                        .value_name("ID")
+                        .help("The id of the task to remove"),
+                )
+                .about("Removes a task"),
+        )
         .get_matches();
-       
+
     let config = combine! {
         AppPaths::empty() =>
             read_xdg().unwrap_or_default(),
@@ -106,16 +114,51 @@ fn main() -> anyhow::Result<()> {
     .build();
     println!("{:?}", config);
 
-    let tasks = load_tasks(&config)?;
+    let mut tasks = load_tasks(&config)?;
     match matches.subcommand() {
         Some(("list", _sub_matches)) => {
             // Call a list function to list all tasks with their id's
             commands::list_with_ids(&tasks)?;
-        },
+        }
+        Some(("remove", sub_matches)) => {
+            let id = sub_matches.value_of("id").unwrap();
+            let filtered_tasks = tasks
+                .iter()
+                .filter(|x| {
+                    let task_id = x
+                        .id()
+                        .as_ref()
+                        .to_simple_ref()
+                        .encode_lower(&mut uuid::Uuid::encode_buffer())
+                        .to_string();
+
+                    task_id.starts_with(id)
+                })
+                .cloned()
+                .collect::<Vec<_>>();
+
+            match filtered_tasks.len() {
+                0 => anyhow::bail!("No task found with that id"),
+                1 => {
+                    let id = filtered_tasks[0].id();
+                    tasks.remove(id);
+                }
+                _ => anyhow::bail!("More than one possible task was found with that id"),
+            };
+        }
         _ => {
-            interactive(config, tasks)?;
+            interactive(&mut tasks)?;
         }
     }
+
+    let mut task_path = config.data.value().to_owned();
+    task_path.push("tasks.json");
+
+    let db = tasks.iter().collect::<Vec<_>>();
+    save_tasks(&db, &task_path).context(format!(
+        "Could not save to file '{}'",
+        task_path.to_str().unwrap_or_default()
+    ))?;
 
     Ok(())
 }
@@ -140,29 +183,23 @@ fn load_tasks(config: &AppPaths<Run>) -> anyhow::Result<TaskList> {
     Ok(tasks)
 }
 
-fn interactive(config: AppPaths<Run>, mut tasks: TaskList) -> anyhow::Result<()> {
+fn interactive(tasks: &mut TaskList) -> anyhow::Result<()> {
     let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskList) -> anyhow::Result<()>> =
         HashMap::new();
     dispatcher.insert(ui::MenuOption::Add, |x| commands::add(ui::prompt_task, x));
-    dispatcher.insert(ui::MenuOption::Remove, |x| commands::remove(ui::prompt_task_remove, x));
+    dispatcher.insert(ui::MenuOption::Remove, |x| {
+        commands::remove(ui::prompt_task_remove, x)
+    });
     dispatcher.insert(ui::MenuOption::List, commands::list);
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
     dispatcher.insert(ui::MenuOption::Today, commands::today);
 
-    let mut task_path = config.data.value().to_owned();
-    task_path.push("tasks.json");
-
     loop {
         let option = ui::menu()?;
         let callback = dispatcher.get_mut(&option).unwrap();
-        callback(&mut tasks)?;
+        callback(tasks)?;
 
         if option == ui::MenuOption::Quit {
-            let db = tasks.iter().collect::<Vec<_>>();
-            save_tasks(&db, &task_path).context(format!(
-                "Could not save to file '{}'",
-                task_path.to_str().unwrap_or_default()
-            ))?;
             break;
         }
     }
