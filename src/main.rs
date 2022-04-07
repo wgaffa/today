@@ -18,8 +18,8 @@ use today::{
     TaskList,
 };
 
-mod ui;
 mod commands;
+mod ui;
 
 today::config!(
     derive(Debug, Default)
