@@ -62,7 +62,7 @@ pub fn list_with_ids(tasks: &TaskList) -> anyhow::Result<()> {
             let id = task
                 .id()
                 .as_ref()
-                .to_hyphenated_ref()
+                .to_simple_ref()
                 .to_string()
                 .chars()
                 .take(id_length)
