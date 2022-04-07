@@ -80,29 +80,60 @@ pub fn list_with_ids(tasks: &TaskList) -> anyhow::Result<()> {
 }
 
 fn shortest_id_length(min_length: usize, tasks: &[&Task]) -> usize {
-    let ids = tasks
-        .iter()
-        .map(|x| x.id().as_ref().to_hyphenated_ref().to_string())
-        .collect::<Vec<_>>();
-
-    let columns = ids.len();
-    let rows = ids[0].len();
-
-    let mut current_length = 0;
-    for row in 0..rows {
-        let mut column = String::new();
-        for id in ids.iter() {
-            column.push(id.chars().nth(row).expect("Unexpected code point in id"));
-        }
-        let column = column.chars().sorted().dedup().count();
-        if column == columns {
-            return min_length.max(current_length);
-        }
-
-        current_length += 1;
+    if tasks.len() <= 1 {
+        return min_length.max(1);
     }
 
-    current_length
+    let ids = tasks
+        .iter()
+        .map(|x| x.id().as_ref().to_simple_ref().to_string())
+        .sorted()
+        .collect::<Vec<_>>();
+
+    let mut id_iter = ids.windows(2);
+
+    let mut prefixes = Vec::new();
+    let mut temp_prefix = "";
+    if let Some(first) = id_iter.next() {
+        for (i, (a, b)) in first[0].chars().zip(first[1].chars()).enumerate() {
+            if a != b {
+                prefixes.push(&first[0][..=i]);
+                temp_prefix = &first[1][..=i];
+                break;
+            }
+        }
+    }
+
+    for pair in id_iter {
+        for (i, (a, b)) in pair[0].chars().zip(pair[1].chars()).enumerate() {
+            if a != b {
+                let new_prefix = &pair[0][..=i];
+
+                if temp_prefix.len() > new_prefix.len() {
+                    prefixes.push(temp_prefix);
+                } else {
+                    prefixes.push(new_prefix);
+                }
+
+                temp_prefix = &pair[1][..=i];
+                break;
+            }
+        }
+    }
+
+    for (i, (a, b)) in ids[ids.len() - 2]
+        .chars()
+        .zip(ids[ids.len() - 1].chars())
+        .enumerate()
+    {
+        if a != b {
+            prefixes.push(&ids[ids.len() - 1][..=i]);
+            break;
+        }
+    }
+
+    let count = prefixes.iter().map(|x| x.len()).max().unwrap();
+    min_length.max(count)
 }
 
 pub fn today(tasks: &mut TaskList) -> anyhow::Result<()> {
