@@ -94,6 +94,7 @@ fn main() -> anyhow::Result<()> {
     let matches = command!()
         .about("Manage tasks to do today")
         .subcommand(Command::new("list").about("List all tasks"))
+        .subcommand(Command::new("today").about("List tasks that are due today"))
         .subcommand(
             Command::new("remove")
                 .arg(
@@ -119,6 +120,9 @@ fn main() -> anyhow::Result<()> {
         Some(("list", _sub_matches)) => {
             // Call a list function to list all tasks with their id's
             commands::list_with_ids(&tasks)?;
+        }
+        Some(("today", _sub_matches)) => {
+            commands::today(&mut tasks)?;
         }
         Some(("remove", sub_matches)) => {
             let id = sub_matches.value_of("id").unwrap();
