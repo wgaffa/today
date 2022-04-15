@@ -27,22 +27,12 @@ where
     Ok(())
 }
 
-pub fn list(tasks: &mut TaskList) -> anyhow::Result<()> {
+pub fn list<T: TaskFormatter>(tasks: &mut TaskList, f: &T) -> anyhow::Result<()> {
     let mut tasks = tasks.iter().collect::<Vec<_>>();
     tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
-    let length = tasks.iter().map(|&x| x.name().len()).max();
-    if let Some(length) = length {
-        for task in tasks {
-            let due = task.due().map_or(String::from("ASAP"), |x| {
-                x.format("%Y-%m-%d %H:%M").to_string()
-            });
-            println!(
-                "{name:width$} {due}",
-                name = task.name(),
-                due = due,
-                width = length,
-            );
-        }
+
+    for task in tasks {
+        println!("{}", <T as TaskFormatter>::format(f, task));
     }
 
     Ok(())
@@ -137,7 +127,7 @@ fn shortest_id_length(min_length: usize, tasks: &[&Task]) -> usize {
 
 pub fn today<T: TaskFormatter>(tasks: &mut TaskList, f: &T) -> anyhow::Result<()> {
     for task in tasks.today() {
-        println!("{}", <T as TaskFormatter>::format(&f, task));
+        println!("{}", <T as TaskFormatter>::format(f, task));
     }
 
     Ok(())

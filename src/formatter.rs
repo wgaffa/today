@@ -10,11 +10,13 @@ pub enum Visibility {
     Hidden,
 }
 
+type Size = usize;
 #[derive(Debug, Clone)]
 pub struct Cell {
     content: String,
     visibility: Visibility,
     margin: Margin,
+    size: Size,
 }
 
 impl Cell {
@@ -22,7 +24,7 @@ impl Cell {
         Self {
             content: content.into(),
             visibility: Visibility::Visible,
-            margin: Margin::default(),
+            ..Default::default()
         }
     }
 
@@ -34,8 +36,15 @@ impl Cell {
         Self { visibility, ..self }
     }
 
-    pub fn with_margin(self, margin: Margin) -> Self {
-        Self { margin, ..self }
+    pub fn with_margin<T: Into<Margin>>(self, margin: T) -> Self {
+        Self {
+            margin: margin.into(),
+            ..self
+        }
+    }
+
+    pub fn with_size(self, size: Size) -> Self {
+        Self { size, ..self }
     }
 
     pub fn with_content<T: Into<String>>(self, content: T) -> Self {
@@ -55,7 +64,8 @@ impl Default for Cell {
         Self {
             content: String::new(),
             visibility: Visibility::Visible,
-            margin: Margin::default(),
+            margin: Default::default(),
+            size: Default::default(),
         }
     }
 }
@@ -69,7 +79,8 @@ impl std::fmt::Display for Cell {
 
         let left = self.margin.left;
         let right = self.margin.right;
-        write!(f, "{:left$}{}{:right$}", "", out, "")
+        let width = self.size;
+        write!(f, "{:left$}{:width$}{:right$}", "", out, "")
     }
 }
 
@@ -78,7 +89,7 @@ pub trait TaskFormatter {
     fn format(&self, task: &Task) -> Format;
 }
 
-#[derive()]
+#[derive(Debug, Clone)]
 pub struct TodayFormatter {
     columns: HashMap<Field, Column>,
 }
@@ -99,6 +110,12 @@ impl TodayFormatter {
     }
 }
 
+impl Default for TodayFormatter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TaskFormatter for TodayFormatter {
     fn format(&self, task: &Task) -> Format {
         let id = task.id().as_ref().to_simple().to_string();
@@ -115,13 +132,70 @@ impl TaskFormatter for TodayFormatter {
         });
         let time = Cell::new(time);
         format!(
-            "{}{}{:>16}{}: {}",
+            "{}{}{}{}: {}",
             id,
             color::Fg(color::LightRed),
             time,
             color::Fg(color::Reset),
             name
         )
+    }
+}
+
+pub struct ListFormatter {
+    columns: HashMap<Field, Column>,
+}
+
+impl ListFormatter {
+    pub fn new() -> Self {
+        Self {
+            columns: HashMap::new(),
+        }
+    }
+
+    pub fn column(&mut self, field: Field) -> Entry<'_, Field, Column> {
+        self.columns.entry(field)
+    }
+
+    pub fn insert<T: Into<Column>>(&mut self, field: Field, cell: T) {
+        self.columns.insert(field, cell.into());
+    }
+}
+
+impl Default for ListFormatter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl TaskFormatter for ListFormatter {
+    fn format(&self, task: &Task) -> Format {
+        let id = task.id().as_ref().to_simple().to_string();
+        let id = self
+            .columns
+            .get(&Field::Id)
+            .cloned()
+            .unwrap_or_default()
+            .cell()
+            .with_content(id);
+        let name = self
+            .columns
+            .get(&Field::Name)
+            .cloned()
+            .unwrap_or_default()
+            .cell()
+            .with_content(task.name());
+        let time = task.due().map_or(String::from("Now"), |x| {
+            x.format("%Y-%m-%d %H:%M").to_string()
+        });
+        let time = self
+            .columns
+            .get(&Field::Time)
+            .cloned()
+            .unwrap_or_default()
+            .cell()
+            .with_content(time);
+        format!("{}{}{}", id, time, name)
     }
 }
 
@@ -164,6 +238,13 @@ pub struct Margin {
 
 impl Margin {
     pub fn new(left: usize, right: usize) -> Self {
+        Self { left, right }
+    }
+}
+
+impl From<(usize, usize)> for Margin {
+    fn from(v: (usize, usize)) -> Self {
+        let (left, right) = v;
         Self { left, right }
     }
 }
