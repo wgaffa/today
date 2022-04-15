@@ -11,7 +11,7 @@ use clap::{command, Arg, Command};
 
 use today::{
     combine,
-    formatter::{Cell, Field, Margin, SimpleFormatter, Visibility},
+    formatter::{Cell, Field, Margin, TodayFormatter, Visibility},
     monoid::{Last, Monoid},
     partial_config::{Build, Run, Select},
     semigroup::Semigroup,
@@ -123,7 +123,7 @@ fn main() -> anyhow::Result<()> {
             commands::list_with_ids(&tasks)?;
         }
         Some(("today", _sub_matches)) => {
-            let mut formatter = SimpleFormatter::new();
+            let mut formatter = TodayFormatter::new();
             formatter.insert(Field::Id, Cell::default().with_margin(Margin::new(0, 1)));
             commands::today(&mut tasks, &formatter)?;
         }
@@ -191,7 +191,7 @@ fn load_tasks(config: &AppPaths<Run>) -> anyhow::Result<TaskList> {
 }
 
 fn interactive(tasks: &mut TaskList) -> anyhow::Result<()> {
-    let mut formatter = SimpleFormatter::new();
+    let mut formatter = TodayFormatter::new();
     formatter.insert(
         Field::Id,
         Cell::default().with_visibility(Visibility::Hidden),

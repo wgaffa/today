@@ -79,11 +79,11 @@ pub trait TaskFormatter {
 }
 
 #[derive()]
-pub struct SimpleFormatter {
+pub struct TodayFormatter {
     columns: HashMap<Field, Column>,
 }
 
-impl SimpleFormatter {
+impl TodayFormatter {
     pub fn new() -> Self {
         Self {
             columns: HashMap::new(),
@@ -99,7 +99,7 @@ impl SimpleFormatter {
     }
 }
 
-impl TaskFormatter for SimpleFormatter {
+impl TaskFormatter for TodayFormatter {
     fn format(&self, task: &Task) -> Format {
         let id = task.id().as_ref().to_simple().to_string();
         let id = self
