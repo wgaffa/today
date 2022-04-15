@@ -135,7 +135,7 @@ fn shortest_id_length(min_length: usize, tasks: &[&Task]) -> usize {
     min_length.max(count)
 }
 
-pub fn today<T: TaskFormatter>(tasks: &mut TaskList, f: T) -> anyhow::Result<()> {
+pub fn today<T: TaskFormatter>(tasks: &mut TaskList, f: &T) -> anyhow::Result<()> {
     for task in tasks.today() {
         println!("{}", <T as TaskFormatter>::format(&f, task));
     }

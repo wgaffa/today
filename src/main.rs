@@ -11,11 +11,12 @@ use clap::{command, Arg, Command};
 
 use today::{
     combine,
+    formatter::{Cell, Field, SimpleFormatter, Visibility},
     monoid::{Last, Monoid},
     partial_config::{Build, Run, Select},
     semigroup::Semigroup,
     Task,
-    TaskList, formatter::SimpleFormatter,
+    TaskList,
 };
 
 mod commands;
@@ -122,7 +123,8 @@ fn main() -> anyhow::Result<()> {
             commands::list_with_ids(&tasks)?;
         }
         Some(("today", _sub_matches)) => {
-            commands::today(&mut tasks, SimpleFormatter)?;
+            let formatter = SimpleFormatter::new();
+            commands::today(&mut tasks, &formatter)?;
         }
         Some(("remove", sub_matches)) => {
             let id = sub_matches.value_of("id").unwrap();
@@ -188,15 +190,15 @@ fn load_tasks(config: &AppPaths<Run>) -> anyhow::Result<TaskList> {
 }
 
 fn interactive(tasks: &mut TaskList) -> anyhow::Result<()> {
-    let mut dispatcher: HashMap<ui::MenuOption, fn(&mut TaskList) -> anyhow::Result<()>> =
+    let mut formatter = SimpleFormatter::new();
+    formatter.insert(Field::Id, Cell::default().with_visibility(Visibility::Hidden));
+    let mut dispatcher: HashMap<ui::MenuOption, Box<dyn Fn(&mut TaskList) -> anyhow::Result<()>>> =
         HashMap::new();
-    dispatcher.insert(ui::MenuOption::Add, |x| commands::add(ui::prompt_task, x));
-    dispatcher.insert(ui::MenuOption::Remove, |x| {
-        commands::remove(ui::prompt_task_remove, x)
-    });
-    dispatcher.insert(ui::MenuOption::List, commands::list);
-    dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
-    dispatcher.insert(ui::MenuOption::Today, |x| commands::today(x, SimpleFormatter));
+    dispatcher.insert(ui::MenuOption::Add, Box::new(|x| commands::add(ui::prompt_task, x)));
+    dispatcher.insert(ui::MenuOption::Remove, Box::new(|x| commands::remove(ui::prompt_task_remove, x)));
+    dispatcher.insert(ui::MenuOption::List, Box::new(commands::list));
+    dispatcher.insert(ui::MenuOption::Quit, Box::new(|_| Ok(())));
+    dispatcher.insert(ui::MenuOption::Today, Box::new(|x| commands::today(x, &formatter)));
 
     loop {
         let option = ui::menu()?;

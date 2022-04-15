@@ -1,3 +1,5 @@
+use std::collections::{hash_map::Entry, HashMap};
+
 use termion::color;
 
 use crate::Task;
@@ -30,8 +32,24 @@ impl Cell {
         Self { visibility, ..self }
     }
 
+    pub fn with_content<T: Into<String>>(self, content: T) -> Self {
+        Self {
+            content: content.into(),
+            ..self
+        }
+    }
+
     pub fn content(&self) -> &str {
         &self.content
+    }
+}
+
+impl Default for Cell {
+    fn default() -> Self {
+        Self {
+            content: String::new(),
+            visibility: Visibility::Visible,
+        }
     }
 }
 
@@ -52,13 +70,36 @@ pub trait TaskFormatter {
 }
 
 #[derive()]
-pub struct SimpleFormatter;
+pub struct SimpleFormatter {
+    columns: HashMap<Field, Column>,
+}
+
+impl SimpleFormatter {
+    pub fn new() -> Self {
+        Self {
+            columns: HashMap::new(),
+        }
+    }
+
+    pub fn column(&mut self, field: Field) -> Entry<'_, Field, Column> {
+        self.columns.entry(field)
+    }
+
+    pub fn insert<T: Into<Column>>(&mut self, field: Field, cell: T) {
+        self.columns.insert(field, cell.into());
+    }
+}
 
 impl TaskFormatter for SimpleFormatter {
     fn format(&self, task: &Task) -> Format {
         let id = task.id().as_ref().to_simple().to_string();
-        let id = Cell::new(id)
-            .with_visibility(Visibility::Hidden);
+        let id = self
+            .columns
+            .get(&Field::Id)
+            .cloned()
+            .unwrap_or_default()
+            .cell()
+            .with_content(id);
         let name = Cell::new(task.name());
         let time = task.due().map_or(String::from("Now"), |x| {
             x.format("%Y-%m-%d %H:%M").to_string()
@@ -72,5 +113,36 @@ impl TaskFormatter for SimpleFormatter {
             color::Fg(color::Reset),
             name
         )
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum Field {
+    Id,
+    Name,
+    Time,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Column {
+    cell: Cell,
+}
+
+impl Column {
+    /// Create a new column using `cell` as the prototype.
+    pub fn new(cell: Cell) -> Self {
+        Self { cell }
+    }
+
+    /// Return a cloned copy of the cell. This is like a prototype to use for all
+    /// cells that should be alike in the same column.
+    pub fn cell(&self) -> Cell {
+        self.cell.clone()
+    }
+}
+
+impl From<Cell> for Column {
+    fn from(cell: Cell) -> Self {
+        Self { cell }
     }
 }
