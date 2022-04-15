@@ -14,6 +14,7 @@ pub enum Visibility {
 pub struct Cell {
     content: String,
     visibility: Visibility,
+    margin: Margin,
 }
 
 impl Cell {
@@ -21,6 +22,7 @@ impl Cell {
         Self {
             content: content.into(),
             visibility: Visibility::Visible,
+            margin: Margin::default(),
         }
     }
 
@@ -30,6 +32,10 @@ impl Cell {
 
     pub fn with_visibility(self, visibility: Visibility) -> Self {
         Self { visibility, ..self }
+    }
+
+    pub fn with_margin(self, margin: Margin) -> Self {
+        Self { margin, ..self }
     }
 
     pub fn with_content<T: Into<String>>(self, content: T) -> Self {
@@ -49,6 +55,7 @@ impl Default for Cell {
         Self {
             content: String::new(),
             visibility: Visibility::Visible,
+            margin: Margin::default(),
         }
     }
 }
@@ -56,11 +63,13 @@ impl Default for Cell {
 impl std::fmt::Display for Cell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let out = match self.visibility {
-            Visibility::Hidden => "",
+            Visibility::Hidden => return Ok(()),
             Visibility::Visible => &self.content,
         };
 
-        write!(f, "{}", out)
+        let left = self.margin.left;
+        let right = self.margin.right;
+        write!(f, "{:left$}{}{:right$}", "", out, "")
     }
 }
 
@@ -144,5 +153,17 @@ impl Column {
 impl From<Cell> for Column {
     fn from(cell: Cell) -> Self {
         Self { cell }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Default)]
+pub struct Margin {
+    right: usize,
+    left: usize,
+}
+
+impl Margin {
+    pub fn new(left: usize, right: usize) -> Self {
+        Self { left, right }
     }
 }
