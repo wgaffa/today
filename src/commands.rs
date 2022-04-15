@@ -1,7 +1,6 @@
 use itertools::Itertools;
-use termion::color;
 
-use crate::{Task, TaskList};
+use today::{Task, TaskList, formatter::TaskFormatter};
 
 pub fn add<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
 where
@@ -136,18 +135,9 @@ fn shortest_id_length(min_length: usize, tasks: &[&Task]) -> usize {
     min_length.max(count)
 }
 
-pub fn today(tasks: &mut TaskList) -> anyhow::Result<()> {
+pub fn today<T: TaskFormatter>(tasks: &mut TaskList, f: T) -> anyhow::Result<()> {
     for task in tasks.today() {
-        let time = task.due().map_or(String::from("Now"), |x| {
-            x.format("%Y-%m-%d %H:%M").to_string()
-        });
-        println!(
-            "{}{:>16}{}: {}",
-            color::Fg(color::LightRed),
-            time,
-            color::Fg(color::Reset),
-            task.name()
-        );
+        println!("{}", <T as TaskFormatter>::format(&f, task));
     }
 
     Ok(())

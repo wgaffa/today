@@ -5,3 +5,5 @@ pub mod monoid;
 pub mod semigroup;
 
 pub use task::*;
+
+pub mod formatter;

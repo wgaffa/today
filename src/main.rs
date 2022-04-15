@@ -15,7 +15,7 @@ use today::{
     partial_config::{Build, Run, Select},
     semigroup::Semigroup,
     Task,
-    TaskList,
+    TaskList, formatter::SimpleFormatter,
 };
 
 mod commands;
@@ -122,7 +122,7 @@ fn main() -> anyhow::Result<()> {
             commands::list_with_ids(&tasks)?;
         }
         Some(("today", _sub_matches)) => {
-            commands::today(&mut tasks)?;
+            commands::today(&mut tasks, SimpleFormatter)?;
         }
         Some(("remove", sub_matches)) => {
             let id = sub_matches.value_of("id").unwrap();
@@ -196,7 +196,7 @@ fn interactive(tasks: &mut TaskList) -> anyhow::Result<()> {
     });
     dispatcher.insert(ui::MenuOption::List, commands::list);
     dispatcher.insert(ui::MenuOption::Quit, |_| Ok(()));
-    dispatcher.insert(ui::MenuOption::Today, commands::today);
+    dispatcher.insert(ui::MenuOption::Today, |x| commands::today(x, SimpleFormatter));
 
     loop {
         let option = ui::menu()?;
