@@ -81,7 +81,9 @@ impl std::fmt::Display for Cell {
         let (out, width) = match (self.visibility, self.size) {
             (Visibility::Hidden, _) => return Ok(()),
             (Visibility::Visible, Size::Min(x)) => (self.content.as_str(), x),
-            (Visibility::Visible, Size::Max(x)) => (&self.content[0..x], x),
+            (Visibility::Visible, Size::Max(x)) => {
+                (self.content.get(0..x).unwrap_or(self.content.as_str()), x)
+            }
         };
 
         let left = self.margin.left;
