@@ -6,7 +6,6 @@ use std::{
 };
 
 use anyhow::Context;
-use clap::{command, Arg, Command};
 
 use today::{
     combine,
@@ -18,6 +17,7 @@ use today::{
     TaskList,
 };
 
+mod cli;
 mod commands;
 mod ui;
 
@@ -91,21 +91,7 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
 }
 
 fn main() -> anyhow::Result<()> {
-    let matches = command!()
-        .about("Manage tasks to do today")
-        .subcommand(Command::new("list").about("List all tasks"))
-        .subcommand(Command::new("today").about("List tasks that are due today"))
-        .subcommand(
-            Command::new("remove")
-                .arg(
-                    Arg::new("id")
-                        .required(true)
-                        .value_name("ID")
-                        .help("The id of the task to remove"),
-                )
-                .about("Removes a task"),
-        )
-        .get_matches();
+    let matches = cli::options();
 
     let config = combine! {
         AppPaths::empty() =>
@@ -134,34 +120,15 @@ fn main() -> anyhow::Result<()> {
         }
         Some(("today", _sub_matches)) => {
             let mut formatter = TodayFormatter::new();
-            formatter.insert(Field::Id, Cell::default().with_visibility(Visibility::Hidden));
+            formatter.insert(
+                Field::Id,
+                Cell::default().with_visibility(Visibility::Hidden),
+            );
             commands::today(&mut tasks, &formatter)?;
         }
         Some(("remove", sub_matches)) => {
             let id = sub_matches.value_of("id").unwrap();
-            let filtered_tasks = tasks
-                .iter()
-                .filter(|x| {
-                    let task_id = x
-                        .id()
-                        .as_ref()
-                        .to_simple_ref()
-                        .encode_lower(&mut uuid::Uuid::encode_buffer())
-                        .to_string();
-
-                    task_id.starts_with(id)
-                })
-                .cloned()
-                .collect::<Vec<_>>();
-
-            match filtered_tasks.len() {
-                0 => anyhow::bail!("No task found with that id"),
-                1 => {
-                    let id = filtered_tasks[0].id();
-                    tasks.remove(id);
-                }
-                _ => anyhow::bail!("More than one possible task was found with that id"),
-            };
+            cli::remove(id, &mut tasks)?;
         }
         _ => {
             interactive(&mut tasks)?;
