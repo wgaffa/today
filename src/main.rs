@@ -1,5 +1,4 @@
 use std::{
-    collections::HashMap,
     env,
     fs,
     io::ErrorKind,
@@ -11,7 +10,7 @@ use clap::{command, Arg, Command};
 
 use today::{
     combine,
-    formatter::{Cell, Column, Field, ListFormatter, TodayFormatter, Visibility},
+    formatter::{Cell, Field, ListFormatter, TodayFormatter, Visibility},
     monoid::{Last, Monoid},
     partial_config::{Build, Run, Select},
     semigroup::Semigroup,
@@ -198,53 +197,38 @@ fn interactive(tasks: &mut TaskList) -> anyhow::Result<()> {
     );
     formatter.insert(Field::Name, Cell::default().with_margin((0, 1)));
 
-    let mut dispatcher: HashMap<ui::MenuOption, Box<dyn Fn(&mut TaskList) -> anyhow::Result<()>>> =
-        HashMap::new();
-    dispatcher.insert(
-        ui::MenuOption::Add,
-        Box::new(|x| commands::add(ui::prompt_task, x)),
-    );
-    dispatcher.insert(
-        ui::MenuOption::Remove,
-        Box::new(|x| commands::remove(ui::prompt_task_remove, x)),
-    );
-    dispatcher.insert(
-        ui::MenuOption::List,
-        Box::new(|x| {
-            let default_cell = Cell::default().with_margin((0, 1));
-            let max_name_length = x.iter().map(|x| x.name().len()).max().unwrap_or_default();
-            let mut formatter = ListFormatter::new();
+    let mut formatter = ListFormatter::new();
 
-            let col = formatter
-                .column(Field::Id)
-                .or_insert_with(|| default_cell.clone().with_visibility(Visibility::Hidden).into());
-            *col = Cell::default().with_visibility(Visibility::Hidden).into();
-
-            formatter
-                .column(Field::Time)
-                .or_insert_with(|| default_cell.clone().into());
-
-            let col = formatter
-                .column(Field::Name)
-                .or_insert_with(|| default_cell.clone().into());
-            *col = Cell::default().with_size(max_name_length).into();
-
-            commands::list(x, &formatter)
-        }),
+    let default_cell = Cell::default().with_margin((0, 1));
+    formatter.insert(
+        Field::Id,
+        default_cell.clone().with_visibility(Visibility::Hidden),
     );
-    dispatcher.insert(ui::MenuOption::Quit, Box::new(|_| Ok(())));
-    dispatcher.insert(
-        ui::MenuOption::Today,
-        Box::new(|x| commands::today(x, &formatter)),
-    );
+    formatter.insert(Field::Name, default_cell.clone());
+    formatter.insert(Field::Time, default_cell.clone());
 
     loop {
         let option = ui::menu()?;
-        let callback = dispatcher.get_mut(&option).unwrap();
-        callback(tasks)?;
 
-        if option == ui::MenuOption::Quit {
-            break;
+        match option {
+            ui::MenuOption::Quit => break,
+            ui::MenuOption::Add => commands::add(ui::prompt_task, tasks)?,
+            ui::MenuOption::List => {
+                let max_name_length = tasks
+                    .iter()
+                    .map(|x| x.name().len())
+                    .max()
+                    .unwrap_or_default();
+
+                let col = formatter
+                    .column(Field::Name)
+                    .or_insert_with(|| default_cell.clone().into());
+                *col = Cell::default().with_size(max_name_length).into();
+
+                commands::list(tasks, &formatter)?
+            }
+            ui::MenuOption::Remove => commands::remove(ui::prompt_task_remove, tasks)?,
+            ui::MenuOption::Today => commands::today(tasks, &formatter)?,
         }
     }
 

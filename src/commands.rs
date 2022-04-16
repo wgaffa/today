@@ -1,6 +1,6 @@
 use itertools::Itertools;
 
-use today::{Task, TaskList, formatter::TaskFormatter};
+use today::{formatter::TaskFormatter, Task, TaskList};
 
 pub fn add<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
 where
