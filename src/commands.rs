@@ -27,7 +27,7 @@ where
     Ok(())
 }
 
-pub fn list<T: TaskFormatter>(tasks: &mut TaskList, f: &T) -> anyhow::Result<()> {
+pub fn list<T: TaskFormatter>(tasks: &TaskList, f: &T) -> anyhow::Result<()> {
     let mut tasks = tasks.iter().collect::<Vec<_>>();
     tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
 
@@ -38,39 +38,9 @@ pub fn list<T: TaskFormatter>(tasks: &mut TaskList, f: &T) -> anyhow::Result<()>
     Ok(())
 }
 
-pub fn list_with_ids(tasks: &TaskList) -> anyhow::Result<()> {
-    let mut tasks = tasks.iter().collect::<Vec<_>>();
-    tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
-    let length = tasks.iter().map(|&x| x.name().len()).max();
-    let id_length = shortest_id_length(5, &tasks);
-    if let Some(length) = length {
-        for task in tasks {
-            let due = task.due().map_or(String::from("ASAP"), |x| {
-                x.format("%Y-%m-%d %H:%M").to_string()
-            });
-            let id = task
-                .id()
-                .as_ref()
-                .to_simple_ref()
-                .to_string()
-                .chars()
-                .take(id_length)
-                .collect::<String>();
-            println!(
-                "{id} {name:width$} {due}",
-                name = task.name(),
-                due = due,
-                width = length,
-            );
-        }
-    }
-
-    Ok(())
-}
-
-fn shortest_id_length(min_length: usize, tasks: &[&Task]) -> usize {
-    if tasks.len() <= 1 {
-        return min_length.max(1);
+pub fn shortest_id_length(tasks: &[Task]) -> usize {
+    if tasks.len() < 1 {
+        return 0;
     }
 
     let ids = tasks
@@ -122,7 +92,7 @@ fn shortest_id_length(min_length: usize, tasks: &[&Task]) -> usize {
     }
 
     let count = prefixes.iter().map(|x| x.len()).max().unwrap();
-    min_length.max(count)
+    count
 }
 
 pub fn today<T: TaskFormatter>(tasks: &mut TaskList, f: &T) -> anyhow::Result<()> {

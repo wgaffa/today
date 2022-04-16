@@ -173,7 +173,9 @@ impl Task {
 impl std::fmt::Display for Task {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = &self.name;
-        let date = self.due.map_or(String::from("ASAP"), |x| x.format("%Y-%m-%d %H:%M").to_string());
+        let date = self.due.map_or(String::from("ASAP"), |x| {
+            x.format("%Y-%m-%d %H:%M").to_string()
+        });
         write!(f, "{name} {date}")
     }
 }
@@ -208,6 +210,10 @@ impl TaskList {
 
     pub fn iter(&self) -> std::slice::Iter<Task> {
         self.tasks.iter()
+    }
+
+    pub fn as_slice(&self) -> &[Task] {
+        &self.tasks
     }
 }
 

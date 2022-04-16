@@ -10,7 +10,12 @@ pub enum Visibility {
     Hidden,
 }
 
-type Size = usize;
+#[derive(Debug, Clone, Copy)]
+pub enum Size {
+    Min(usize),
+    Max(usize),
+}
+
 #[derive(Debug, Clone)]
 pub struct Cell {
     content: String,
@@ -24,6 +29,7 @@ impl Cell {
         Self {
             content: content.into(),
             visibility: Visibility::Visible,
+            size: Size::Min(0),
             ..Default::default()
         }
     }
@@ -65,21 +71,21 @@ impl Default for Cell {
             content: String::new(),
             visibility: Visibility::Visible,
             margin: Default::default(),
-            size: Default::default(),
+            size: Size::Min(0),
         }
     }
 }
 
 impl std::fmt::Display for Cell {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let out = match self.visibility {
-            Visibility::Hidden => return Ok(()),
-            Visibility::Visible => &self.content,
+        let (out, width) = match (self.visibility, self.size) {
+            (Visibility::Hidden, _) => return Ok(()),
+            (Visibility::Visible, Size::Min(x)) => (self.content.as_str(), x),
+            (Visibility::Visible, Size::Max(x)) => (&self.content[0..x], x),
         };
 
         let left = self.margin.left;
         let right = self.margin.right;
-        let width = self.size;
         write!(f, "{:left$}{:width$}{:right$}", "", out, "")
     }
 }

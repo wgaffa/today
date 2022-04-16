@@ -10,7 +10,7 @@ use clap::{command, Arg, Command};
 
 use today::{
     combine,
-    formatter::{Cell, Field, ListFormatter, TodayFormatter, Visibility},
+    formatter::{self, Cell, Field, ListFormatter, TodayFormatter, Visibility},
     monoid::{Last, Monoid},
     partial_config::{Build, Run, Select},
     semigroup::Semigroup,
@@ -118,8 +118,20 @@ fn main() -> anyhow::Result<()> {
     let mut tasks = load_tasks(&config)?;
     match matches.subcommand() {
         Some(("list", _sub_matches)) => {
-            // Call a list function to list all tasks with their id's
-            commands::list_with_ids(&tasks)?;
+            let shortest_id = commands::shortest_id_length(tasks.as_slice()).max(5);
+            let mut formatter = ListFormatter::new();
+
+            let default_cell = Cell::default().with_margin((0, 1));
+            formatter.insert(
+                Field::Id,
+                default_cell
+                    .clone()
+                    .with_size(formatter::Size::Max(shortest_id)),
+            );
+            formatter.insert(Field::Name, default_cell.clone());
+            formatter.insert(Field::Time, default_cell.clone());
+
+            commands::list(&tasks, &formatter)?;
         }
         Some(("today", _sub_matches)) => {
             let mut formatter = TodayFormatter::new();
@@ -223,7 +235,9 @@ fn interactive(tasks: &mut TaskList) -> anyhow::Result<()> {
                 let col = formatter
                     .column(Field::Name)
                     .or_insert_with(|| default_cell.clone().into());
-                *col = Cell::default().with_size(max_name_length).into();
+                *col = Cell::default()
+                    .with_size(formatter::Size::Max(max_name_length))
+                    .into();
 
                 commands::list(tasks, &formatter)?
             }
