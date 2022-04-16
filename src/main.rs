@@ -113,7 +113,6 @@ fn main() -> anyhow::Result<()> {
             read_env().unwrap_or_default(),
     }
     .build();
-    println!("{:?}", config);
 
     let mut tasks = load_tasks(&config)?;
     match matches.subcommand() {
