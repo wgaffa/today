@@ -134,7 +134,7 @@ fn main() -> anyhow::Result<()> {
         }
         Some(("today", _sub_matches)) => {
             let mut formatter = TodayFormatter::new();
-            formatter.insert(Field::Id, Cell::default().with_margin((0, 1)));
+            formatter.insert(Field::Id, Cell::default().with_visibility(Visibility::Hidden));
             commands::today(&mut tasks, &formatter)?;
         }
         Some(("remove", sub_matches)) => {
