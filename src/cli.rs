@@ -1,6 +1,7 @@
+use chrono::{prelude::*, NaiveDateTime};
 use clap::{command, Arg, ArgMatches, Command};
 
-use today::TaskList;
+use today::{Task, TaskList, TaskName};
 
 pub fn options() -> ArgMatches {
     command!()
@@ -17,7 +18,39 @@ pub fn options() -> ArgMatches {
                 )
                 .about("Removes a task"),
         )
+        .subcommand(
+            Command::new("add")
+                .args(&[
+                    Arg::new("name")
+                        .required(true)
+                        .value_name("NAME")
+                        .validator(|x| {
+                            TaskName::new(x).ok_or(anyhow::anyhow!(
+                                "A task name must have atleast one printable character"
+                            ))
+                        })
+                        .help("The task name to be done at the specified due date"),
+                    Arg::new("due")
+                        .required(false)
+                        .value_name("DUE")
+                        .validator(|x| NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M"))
+                        .help("When the task is due in the format YYYY-MM-DD HH:MM"),
+                ])
+                .about("Add a new task"),
+        )
         .get_matches()
+}
+
+pub fn add(name: TaskName, due: Option<DateTime<Utc>>, tasks: &mut TaskList) -> anyhow::Result<()> {
+    let task = if let Some(date) = due {
+        Task::new(name).with_date_time(date)
+    } else {
+        Task::new(name)
+    };
+
+    tasks.add(task);
+
+    Ok(())
 }
 
 pub fn remove(id: &str, tasks: &mut TaskList) -> anyhow::Result<()> {

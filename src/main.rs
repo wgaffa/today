@@ -6,6 +6,7 @@ use std::{
 };
 
 use anyhow::Context;
+use chrono::{prelude::*, NaiveDateTime};
 
 use today::{
     combine,
@@ -15,6 +16,7 @@ use today::{
     semigroup::Semigroup,
     Task,
     TaskList,
+    TaskName,
 };
 
 mod cli;
@@ -129,6 +131,15 @@ fn main() -> anyhow::Result<()> {
         Some(("remove", sub_matches)) => {
             let id = sub_matches.value_of("id").unwrap();
             cli::remove(id, &mut tasks)?;
+        }
+        Some(("add", sub_matches)) => {
+            let name = TaskName::new(sub_matches.value_of("name").unwrap()).unwrap();
+            let due = sub_matches
+                .value_of("due")
+                .map(|x| NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M").unwrap())
+                .map(|x| DateTime::<Utc>::from_utc(x, Utc));
+
+            cli::add(name, due, &mut tasks)?;
         }
         _ => {
             interactive(&mut tasks)?;
