@@ -21,8 +21,19 @@ pub fn options() -> ArgMatches {
         .subcommand(
             Command::new("add")
                 .args(&[
+                    Arg::new("now")
+                        .short('n')
+                        .long("now")
+                        .conflicts_with("due")
+                        .help("Set due to be done ASAP"),
+                    Arg::new("due")
+                        .short('d')
+                        .long("due")
+                        .takes_value(true)
+                        .validator(|x| NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M"))
+                        .help("Set the due date in the format YYYY-MM-DD HH:MM"),
                     Arg::new("name")
-                        .required(true)
+                        .required(false)
                         .value_name("NAME")
                         .validator(|x| {
                             TaskName::new(x).ok_or(anyhow::anyhow!(
@@ -30,11 +41,6 @@ pub fn options() -> ArgMatches {
                             ))
                         })
                         .help("The task name to be done at the specified due date"),
-                    Arg::new("due")
-                        .required(false)
-                        .value_name("DUE")
-                        .validator(|x| NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M"))
-                        .help("When the task is due in the format YYYY-MM-DD HH:MM"),
                 ])
                 .about("Add a new task"),
         )

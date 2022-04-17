@@ -78,7 +78,7 @@ pub fn prompt_task_remove(options: &[Task]) -> anyhow::Result<Option<Task>> {
     Ok(selected)
 }
 
-fn prompt_time() -> InquireResult<NaiveTime> {
+pub fn prompt_time() -> InquireResult<NaiveTime> {
     let time_style =
         RenderConfig::default_colored().with_canceled_prompt_indicator(Styled::new("00:00:00"));
 
@@ -101,7 +101,7 @@ fn prompt_time() -> InquireResult<NaiveTime> {
     }
 }
 
-fn prompt_due() -> InquireResult<Option<NaiveDate>> {
+pub fn prompt_due() -> InquireResult<Option<NaiveDate>> {
     let date_style = RenderConfig::default_colored()
         .with_canceled_prompt_indicator(Styled::new("As soon as possible"));
 
@@ -113,7 +113,7 @@ fn prompt_due() -> InquireResult<Option<NaiveDate>> {
         .prompt_skippable()
 }
 
-fn prompt_name() -> anyhow::Result<String> {
+pub fn prompt_name() -> anyhow::Result<String> {
     let name_validator: StringValidator = &|input: &str| {
         if input.chars().any(|x| !x.is_whitespace()) {
             Ok(())

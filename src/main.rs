@@ -133,11 +133,34 @@ fn main() -> anyhow::Result<()> {
             cli::remove(id, &mut tasks)?;
         }
         Some(("add", sub_matches)) => {
-            let name = TaskName::new(sub_matches.value_of("name").unwrap()).unwrap();
-            let due = sub_matches
-                .value_of("due")
-                .map(|x| NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M").unwrap())
-                .map(|x| DateTime::<Utc>::from_utc(x, Utc));
+            let name = sub_matches
+                .value_of("name")
+                .and_then(|x| TaskName::new(x))
+                .or_else(|| TaskName::new(&ui::prompt_name().ok()?))
+                .expect(&format!(
+                    "I expected a valid TaskName but could not construct one from the type {:?}",
+                    sub_matches.value_of("name")
+                ));
+
+            let due = if sub_matches.is_present("now") {
+                None
+            } else {
+                sub_matches
+                    .value_of("due")
+                    .map(|x| NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M").unwrap())
+                    .map(|x| Utc.from_local_datetime(&x).unwrap())
+                    .or_else(|| {
+                        let date = ui::prompt_due().ok()?;
+
+                        if let Some(date) = date {
+                            let time = ui::prompt_time().ok()?;
+                            let due = date.and_time(time);
+                            Some(Utc.from_local_datetime(&due).unwrap())
+                        } else {
+                            None
+                        }
+                    })
+            };
 
             cli::add(name, due, &mut tasks)?;
         }
