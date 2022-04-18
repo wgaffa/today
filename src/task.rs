@@ -2,6 +2,7 @@ use std::convert::AsRef;
 
 use chrono::prelude::*;
 use serde::{Deserialize, Serialize};
+use thiserror::Error;
 use uuid::Uuid;
 
 /// `TaskName` is a any non empty string with at least one printable character with surrounding
@@ -114,6 +115,16 @@ impl Task {
         }
     }
 
+    pub fn with_name(mut self, name: TaskName) -> Self {
+        self.name = name;
+        self
+    }
+
+    pub fn with_now(mut self) -> Self {
+        self.due = None;
+        self
+    }
+
     /// Add a due date in UTC for a task
     /// ```
     /// use today::{Task, TaskName};
@@ -180,6 +191,12 @@ impl std::fmt::Display for Task {
     }
 }
 
+#[derive(Debug, Clone, Error)]
+pub enum TaskError {
+    #[error("Invalid id '{0}'")]
+    InvalidId(TaskId),
+}
+
 #[derive(Debug)]
 pub struct TaskList {
     tasks: Vec<Task>,
@@ -201,6 +218,21 @@ impl TaskList {
     /// Remove a task from the list
     pub fn remove(&mut self, task_id: &TaskId) {
         self.tasks.retain(|x| x.id != *task_id);
+    }
+
+    pub fn edit(&mut self, task: Task) -> Result<Task, TaskError> {
+        let filtered_tasks = self
+            .tasks
+            .iter()
+            .position(|x| x.id() == task.id());
+
+        match filtered_tasks {
+            None => Err(TaskError::InvalidId(task.id().clone())),
+            Some(index) => {
+                let old = std::mem::replace(&mut self.tasks[index], task);
+                Ok(old)
+            }
+        }
     }
 
     /// Returns an iterator over all tasks that are due today

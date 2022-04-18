@@ -44,6 +44,10 @@ pub fn options() -> ArgMatches {
                 ])
                 .about("Add a new task"),
         )
+        .subcommand(
+            Command::new("edit")
+                .about("Edit one or more tasks")
+        )
         .get_matches()
 }
 
