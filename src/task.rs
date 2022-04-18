@@ -120,8 +120,8 @@ impl Task {
         self
     }
 
-    pub fn with_now(mut self) -> Self {
-        self.due = None;
+    pub fn with_due(mut self, due: Option<DateTime<Utc>>) -> Self {
+        self.due = due;
         self
     }
 

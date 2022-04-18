@@ -169,76 +169,47 @@ fn main() -> anyhow::Result<()> {
         Some(("edit", _sub_matches)) => {
             for line in io::stdin().lock().lines() {
                 let line = line?;
-                if let Some((field, rest)) = line.split_once(|x: char| x.is_whitespace()) {
-                    let filtered_tasks = tasks
-                        .iter()
-                        .filter(|x| {
-                            x.id()
-                                .as_ref()
-                                .to_simple_ref()
-                                .to_string()
-                                .starts_with(field)
-                        })
-                        .collect::<Vec<_>>();
+                let (id, rest) = match line.split_once(|x: char| x.is_whitespace()) {
+                    Some(x) => x,
+                    None => {
+                        eprintln!("Could not parse id");
+                        continue;
+                    }
+                };
+                let filtered_tasks = tasks
+                    .iter()
+                    .filter(|x| x.id().to_string().starts_with(id))
+                    .collect::<Vec<_>>();
 
-                    match filtered_tasks.len() {
-                        0 => eprintln!("No task found with the id '{}'", field),
-                        1 => {
-                            let task = filtered_tasks[0];
-                            if let Some((date, rest)) =
-                                rest.trim().split_once(|x: char| x.is_whitespace())
-                            {
-                                if date.to_lowercase() == "now" {
-                                    let name = match TaskName::new(rest) {
-                                        Some(name) => name,
-                                        None => {
-                                            eprintln!("Could not create task with name '{rest}'");
-                                            continue;
-                                        }
-                                    };
-
-                                    let new_task = task.clone().with_name(name).with_now();
-                                    if let Err(e) = tasks.edit(new_task) {
-                                        eprintln!("Unable to edit the task: {e}");
-                                    }
-                                } else if let Some((time, rest)) =
-                                    rest.trim().split_once(|x: char| x.is_whitespace())
-                                {
-                                    let datetime = Utc.datetime_from_str(
-                                        &[date, time].join(" "),
-                                        "%Y-%m-%d %H:%M",
-                                    );
-                                    let datetime = match datetime {
-                                        Ok(date) => date,
-                                        Err(e) => {
-                                            eprintln!("Could not parse date: {e}");
-
-                                            // This is quite far nested away from the actual for loop
-                                            // TODO: Find a way to make this nicer
-                                            continue;
-                                        }
-                                    };
-                                    let name = match TaskName::new(rest) {
-                                        Some(name) => name,
-                                        None => {
-                                            eprintln!("Could not create task with name '{rest}'");
-                                            continue;
-                                        }
-                                    };
-
-                                    let new_task =
-                                        task.clone().with_name(name).with_date_time(datetime);
-                                    if let Err(e) = tasks.edit(new_task) {
-                                        eprintln!("Unable to edit the task: {e}");
-                                    }
-                                }
+                match filtered_tasks.len() {
+                    0 => eprintln!("No task found with the id '{}'", id),
+                    1 => {
+                        let task = filtered_tasks[0];
+                        let (date, rest) = match parse_due(rest) {
+                            Ok((date, rest)) => (date, rest),
+                            Err(e) => {
+                                eprintln!("{e}");
+                                continue;
                             }
+                        };
+
+                        let name = match TaskName::new(rest) {
+                            Some(name) => name,
+                            None => {
+                                eprintln!("Could not create task with name '{rest}'");
+                                continue;
+                            }
+                        };
+
+                        let new_task = task.clone().with_name(name).with_due(date);
+                        if let Err(e) = tasks.edit(new_task) {
+                            eprintln!("Unable to edit the task: {e}");
                         }
-                        _ => eprintln!(
-                            "More than one possible task was found with the id '{}'",
-                            field
-                        ),
-                    };
+                    }
+                    _ => eprintln!(
+                        "More than one possible task was found with the id '{}'",
+                        id
+                    ),
                 }
             }
         }
@@ -257,6 +228,20 @@ fn main() -> anyhow::Result<()> {
     ))?;
 
     Ok(())
+}
+
+fn parse_due(input: &str) -> anyhow::Result<(Option<DateTime<Utc>>, &str)> {
+    if let Some((date, rest)) = input.trim().split_once(|x: char| x.is_whitespace()) {
+        if date.to_lowercase() == "now" {
+            return Ok((None, rest));
+        } else if let Some((time, rest)) = rest.trim().split_once(|x: char| x.is_whitespace()) {
+            let datetime = Utc.datetime_from_str(&[date, time].join(" "), "%Y-%m-%d %H:%M")?;
+
+            return Ok((Some(datetime), rest));
+        }
+    }
+
+    anyhow::bail!("Could not parse due date")
 }
 
 fn load_tasks(config: &AppPaths<Run>) -> anyhow::Result<TaskList> {
