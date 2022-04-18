@@ -39,7 +39,7 @@ pub fn list<T: TaskFormatter>(tasks: &TaskList, f: &T) -> anyhow::Result<()> {
 }
 
 pub fn shortest_id_length(tasks: &[Task]) -> usize {
-    if tasks.len() < 1 {
+    if tasks.is_empty() {
         return 0;
     }
 

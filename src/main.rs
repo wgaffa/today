@@ -118,7 +118,7 @@ fn main() -> anyhow::Result<()> {
                     .with_size(formatter::Size::Max(shortest_id)),
             );
             formatter.insert(Field::Name, default_cell.clone());
-            formatter.insert(Field::Time, default_cell.clone());
+            formatter.insert(Field::Time, default_cell);
 
             commands::list(&tasks, &formatter)?;
         }
@@ -137,12 +137,12 @@ fn main() -> anyhow::Result<()> {
         Some(("add", sub_matches)) => {
             let name = sub_matches
                 .value_of("name")
-                .and_then(|x| TaskName::new(x))
+                .and_then(TaskName::new)
                 .or_else(|| TaskName::new(&ui::prompt_name().ok()?))
-                .expect(&format!(
+                .unwrap_or_else(|| panic!(
                     "I expected a valid TaskName but could not construct one from the type {:?}",
-                    sub_matches.value_of("name")
-                ));
+                    sub_matches.value_of("name") )
+                );
 
             let due = if sub_matches.is_present("now") {
                 None

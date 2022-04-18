@@ -36,7 +36,7 @@ pub fn options() -> ArgMatches {
                         .required(false)
                         .value_name("NAME")
                         .validator(|x| {
-                            TaskName::new(x).ok_or(anyhow::anyhow!(
+                            TaskName::new(x).ok_or_else(|| anyhow::anyhow!(
                                 "A task name must have atleast one printable character"
                             ))
                         })
