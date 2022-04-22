@@ -1,3 +1,5 @@
+use std::str::FromStr;
+
 use chrono::prelude::*;
 
 use crate::{Task, TaskId, TaskName};
@@ -20,6 +22,7 @@ pub enum Program {
 
 #[derive(Debug, Clone, Copy)]
 pub enum ParseError {
+    InvalidTaskName,
     InvalidTime,
     ExpectedEOF,
     UnexpectedToken,
@@ -41,7 +44,7 @@ impl<'a> Parser<'a> {
         let next_pos = self.text[next_bounds..]
             .chars()
             .position(|x| !x.is_whitespace());
-        self.position = next_pos.unwrap_or_else(|| self.text.len());
+        self.position = next_bounds + next_pos.unwrap_or_else(|| self.text.len() - next_bounds);
     }
 
     fn peek(&self) -> Option<char> {
@@ -129,6 +132,9 @@ impl<'a> Parser<'a> {
             }
         } else {
             let date = self.date()?;
+
+            self.skip_whitespace();
+
             let time = self.time()?;
 
             Utc.from_utc_date(&date)
@@ -138,31 +144,35 @@ impl<'a> Parser<'a> {
         }
     }
 
+    fn parse_type<T: FromStr>(&mut self, len: usize) -> Result<T, ParseError> {
+        let value = self.text[self.position..self.position + len]
+            .parse::<T>()
+            .map_err(|_| ParseError::UnexpectedToken)?;
+
+        self.position += len + 1;
+
+        Ok(value)
+    }
+
     fn date(&mut self) -> Result<NaiveDate, ParseError> {
         let is_dash = |x| x == '-';
-        let index = self.text[self.position..]
+        let year = self.text[self.position..]
             .chars()
             .position(is_dash)
-            .ok_or(ParseError::UnexpectedEOF)?;
-        let year = self.text[self.position..index]
-            .parse::<i32>()
-            .map_err(|_| ParseError::InvalidTime)?;
-        self.position += index;
+            .ok_or(ParseError::UnexpectedEOF)
+            .and_then(|x| self.parse_type(x))?;
 
-        let index = self.text[self.position..]
+        let month = self.text[self.position..]
             .chars()
             .position(is_dash)
-            .ok_or(ParseError::UnexpectedEOF)?;
-        let month = self.text[self.position..index]
-            .parse::<u32>()
-            .map_err(|_| ParseError::InvalidTime)?;
-        self.position += index;
+            .ok_or(ParseError::UnexpectedEOF)
+            .and_then(|x| self.parse_type(x))?;
 
         let index = self.text[self.position..]
             .chars()
             .position(|x| x.is_whitespace())
-            .unwrap_or_else(|| self.text.len());
-        let day = self.text[self.position..index]
+            .unwrap_or_else(|| self.text.len() - self.position);
+        let day = self.text[self.position..self.position + index]
             .parse::<u32>()
             .map_err(|_| ParseError::InvalidTime)?;
         self.position += index;
@@ -201,7 +211,9 @@ impl<'a> Parser<'a> {
     }
 
     fn name(&mut self) -> Result<TaskName, ParseError> {
-        todo!()
+        self.skip_whitespace();
+        TaskName::new(&self.text[self.position..])
+            .ok_or(ParseError::InvalidTaskName)
     }
 }
 
@@ -229,5 +241,47 @@ mod tests {
         let mut parser = Parser::new(input);
 
         assert!(parser.time().is_err());
+    }
+
+    #[test]
+    fn date_should_parse_valid_date() {
+        let date = "2022-01-24";
+        let mut parser = Parser::new(date);
+
+        let result = parser.date();
+        assert!(result.is_ok());
+        assert_eq!(parser.position, 10);
+        assert_eq!(result.unwrap(), NaiveDate::from_ymd(2022, 1, 24));
+    }
+
+    #[test]
+    fn datetime_should_parse_valid_input() {
+        let datetime = "2022-04-27 9:43";
+        let mut parser = Parser::new(datetime);
+
+        let result = parser.datetime().unwrap();
+
+        assert_eq!(parser.position, 15);
+        assert_eq!(result, Some(Utc.ymd(2022, 4, 27).and_hms(9, 43, 0)));
+    }
+
+    #[test_case("   garbage", 0, 3)]
+    #[test_case("garbage   for life", 7, 10)]
+    fn skip_whitespace_should_advance_position(input: &str, start: usize, end: usize) {
+        let mut parser = Parser::new(input);
+        parser.position = start;
+
+        parser.skip_whitespace();
+
+        assert_eq!(parser.position, end);
+    }
+
+    #[test]
+    fn taskname_should_consume_everything() {
+        let mut parser = Parser::new("This is a test");
+
+        let name = parser.name().unwrap();
+
+        assert_eq!(name, "This is a test");
     }
 }
