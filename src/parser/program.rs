@@ -1,6 +1,7 @@
 use std::str::FromStr;
 
 use chrono::prelude::*;
+use thiserror::Error;
 
 use crate::{Task, TaskId, TaskName};
 
@@ -20,13 +21,36 @@ pub enum Program {
     Remove(TaskId),
 }
 
-#[derive(Debug, Clone, Copy)]
-pub enum ParseError {
+#[derive(Debug, Clone, Copy, Error)]
+pub enum TokenError {
+    #[error("Could not parse task name")]
     InvalidTaskName,
+    #[error("Unable to parse due date")]
     InvalidTime,
-    ExpectedEOF,
-    UnexpectedToken,
+    #[error("Expected end of string, got '{0}'")]
+    ExpectedEOF(char),
+    #[error("Unexpected token '{0}'")]
+    UnexpectedToken(char),
+    #[error("Was expecting a token but got end of string")]
     UnexpectedEOF,
+}
+
+#[derive(Debug, Clone, Copy, Error)]
+pub struct ParseError {
+    col: usize,
+    source: TokenError,
+}
+
+impl ParseError {
+    pub fn position(&self) -> usize {
+        self.col
+    }
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        writeln!(f, "@{}: {:?}", self.col, self.source)
+    }
 }
 
 pub struct Parser<'a> {
@@ -60,15 +84,31 @@ impl<'a> Parser<'a> {
         let instruction = self.instruction()?;
 
         if self.position <= self.text.len() {
-            Err(ParseError::ExpectedEOF)
+            let (ch, _) = self.get_char_at(self.position);
+            Err(self.create_error(TokenError::ExpectedEOF(ch.unwrap_or_default())))
         } else {
             Ok(instruction)
         }
     }
 
+    fn get_char_at(&self, index: usize) -> (Option<char>, usize) {
+        let ceiling_boundary = self.text.ceil_char_boundary(index);
+        (
+            self.text[ceiling_boundary..].chars().next(),
+            ceiling_boundary,
+        )
+    }
+
+    fn create_error(&self, source: TokenError) -> ParseError {
+        ParseError {
+            col: self.position,
+            source,
+        }
+    }
+
     fn instruction(&mut self) -> Result<Program, ParseError> {
         self.skip_whitespace();
-        let next_char = self.peek().ok_or(ParseError::UnexpectedEOF)?;
+        let next_char = self.peek().ok_or(self.create_error(TokenError::UnexpectedEOF))?;
 
         if next_char == 'n' {
             self.add()
@@ -96,7 +136,8 @@ impl<'a> Parser<'a> {
 
             todo!()
         } else {
-            return Err(ParseError::UnexpectedToken);
+            let (ch, _) = self.get_char_at(self.position);
+            return Err(self.create_error(TokenError::UnexpectedToken(ch.unwrap_or_default())));
         }
     }
 
@@ -113,41 +154,50 @@ impl<'a> Parser<'a> {
     }
 
     fn datetime(&mut self) -> Result<Option<DateTime<Utc>>, ParseError> {
-        let next_char = self.peek().ok_or(ParseError::UnexpectedEOF)?;
+        let (current_char, upper_index) = self.get_char_at(self.position);
+        self.position = upper_index; // ensures that position is always at a boundary
 
-        if next_char == 'N' {
-            let keyword = self.text[self.position..]
-                .chars()
-                .position(|x| x.is_whitespace())
-                .map_or_else(
-                    || &self.text[self.position..],
-                    |x| &self.text[self.position..x],
-                );
+        match current_char {
+            None => Err(self.create_error(TokenError::UnexpectedEOF)),
+            Some(ch) if ch == 'N' => {
+                let keyword = self.text[self.position..]
+                    .chars()
+                    .position(|x| x.is_whitespace())
+                    .map_or_else(
+                        || &self.text[self.position..],
+                        |x| &self.text[self.position..x],
+                    );
 
-            if keyword == "Now" {
-                self.position += 3;
-                Ok(None)
-            } else {
-                Err(ParseError::UnexpectedToken)
+                if keyword == "Now" {
+                    self.position += 3;
+                    Ok(None)
+                } else {
+                    let (ch, _) = self.get_char_at(self.position);
+                    Err(self.create_error(TokenError::UnexpectedToken(ch.unwrap_or_default())))
+                }
             }
-        } else {
-            let date = self.date()?;
+            Some(_) => {
+                let date = self.date()?;
 
-            self.skip_whitespace();
+                self.skip_whitespace();
 
-            let time = self.time()?;
+                let time = self.time()?;
 
-            Utc.from_utc_date(&date)
-                .and_time(time)
-                .map(|x| Some(x))
-                .ok_or(ParseError::InvalidTime)
+                Utc.from_utc_date(&date)
+                    .and_time(time)
+                    .map(|x| Some(x))
+                    .ok_or(self.create_error(TokenError::InvalidTime))
+            }
         }
     }
 
     fn parse_type<T: FromStr>(&mut self, len: usize) -> Result<T, ParseError> {
         let value = self.text[self.position..self.position + len]
             .parse::<T>()
-            .map_err(|_| ParseError::UnexpectedToken)?;
+            .map_err(|_| {
+                let (ch, _) = self.get_char_at(self.position);
+                self.create_error(TokenError::UnexpectedToken(ch.unwrap_or_default()))
+            })?;
 
         self.position += len + 1;
 
@@ -159,13 +209,13 @@ impl<'a> Parser<'a> {
         let year = self.text[self.position..]
             .chars()
             .position(is_dash)
-            .ok_or(ParseError::UnexpectedEOF)
+            .ok_or(self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| self.parse_type(x))?;
 
         let month = self.text[self.position..]
             .chars()
             .position(is_dash)
-            .ok_or(ParseError::UnexpectedEOF)
+            .ok_or(self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| self.parse_type(x))?;
 
         let index = self.text[self.position..]
@@ -174,46 +224,45 @@ impl<'a> Parser<'a> {
             .unwrap_or_else(|| self.text.len() - self.position);
         let day = self.text[self.position..self.position + index]
             .parse::<u32>()
-            .map_err(|_| ParseError::InvalidTime)?;
+            .map_err(|_| self.create_error(TokenError::InvalidTime))?;
         self.position += index;
 
-        NaiveDate::from_ymd_opt(year, month, day).ok_or(ParseError::InvalidTime)
+        NaiveDate::from_ymd_opt(year, month, day).ok_or(self.create_error(TokenError::InvalidTime))
     }
 
     fn time(&mut self) -> Result<NaiveTime, ParseError> {
         let hour = self.text[self.position..]
             .chars()
             .position(|x| x == ':')
-            .ok_or(ParseError::UnexpectedEOF)
+            .ok_or(self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| {
                 let pos = self.position;
                 self.position += x + 1;
                 self.text[pos..pos + x]
                     .parse::<u32>()
-                    .map_err(|_| ParseError::InvalidTime)
+                    .map_err(|_| self.create_error(TokenError::InvalidTime))
             })?;
 
         let minute = self.text[self.position..]
             .chars()
             .position(|x| x.is_whitespace())
             .or_else(|| Some(self.text.len() - self.position))
-            .ok_or(ParseError::UnexpectedEOF)
+            .ok_or(self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| {
                 dbg!(x);
                 let pos = self.position;
                 self.position += x;
                 self.text[pos..pos + x]
                     .parse::<u32>()
-                    .map_err(|_| ParseError::InvalidTime)
+                    .map_err(|_| self.create_error(TokenError::InvalidTime))
             })?;
 
-        NaiveTime::from_hms_opt(hour, minute, 0).ok_or(ParseError::InvalidTime)
+        NaiveTime::from_hms_opt(hour, minute, 0).ok_or(self.create_error(TokenError::InvalidTime))
     }
 
     fn name(&mut self) -> Result<TaskName, ParseError> {
         self.skip_whitespace();
-        TaskName::new(&self.text[self.position..])
-            .ok_or(ParseError::InvalidTaskName)
+        TaskName::new(&self.text[self.position..]).ok_or(self.create_error(TokenError::InvalidTaskName))
     }
 }
 
@@ -263,6 +312,15 @@ mod tests {
 
         assert_eq!(parser.position, 15);
         assert_eq!(result, Some(Utc.ymd(2022, 4, 27).and_hms(9, 43, 0)));
+    }
+
+    #[test]
+    fn datetime_should_parse_given_now() {
+        let mut parser = Parser::new("Now");
+
+        let result = parser.datetime().unwrap();
+
+        assert!(result.is_none());
     }
 
     #[test_case("   garbage", 0, 3)]
