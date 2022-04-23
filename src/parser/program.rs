@@ -136,10 +136,10 @@ impl<'a> Parser<'a> {
             self.skip_whitespace();
             let name = self.name()?;
 
-            todo!()
+            Ok(Program::Add(Task::new(name).with_due(datetime)))
         } else {
             let (ch, _) = self.get_char_at(self.position);
-            return Err(self.create_error(TokenError::UnexpectedToken(ch.unwrap_or_default())));
+            Err(self.create_error(TokenError::UnexpectedToken(ch.unwrap_or_default())))
         }
     }
 
@@ -360,5 +360,20 @@ mod tests {
 
         assert_eq!(result, input);
         assert_eq!(parser.position, end);
+    }
+
+    #[test]
+    fn add_should_create_new_task() {
+        let mut parser = Parser::new("new 2022-12-24 00:00 It's Christmas everybody");
+
+        let result = parser.add().unwrap();
+
+        match result {
+            Program::Add(task) => {
+                assert_eq!(task.name(), "It's Christmas everybody");
+                assert_eq!(task.due(), Some(&Utc.ymd(2022, 12, 24).and_hms(0, 0, 0)));
+            }
+            _ => assert!(false)
+        }
     }
 }
