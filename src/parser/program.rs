@@ -108,7 +108,9 @@ impl<'a> Parser<'a> {
 
     fn instruction(&mut self) -> Result<Program, ParseError> {
         self.skip_whitespace();
-        let next_char = self.peek().ok_or(self.create_error(TokenError::UnexpectedEOF))?;
+        let next_char = self
+            .peek()
+            .ok_or(self.create_error(TokenError::UnexpectedEOF))?;
 
         if next_char == 'n' {
             self.add()
@@ -145,8 +147,13 @@ impl<'a> Parser<'a> {
         todo!()
     }
 
-    fn id(&mut self) -> Result<TaskId, ParseError> {
-        todo!()
+    fn id(&mut self) -> Result<String, ParseError> {
+        let (id, _) = self.text[self.position..]
+            .split_once(|x: char| x.is_whitespace())
+            .unwrap_or_else(|| (&self.text[self.position..], ""));
+
+        self.position += id.len();
+        Ok(String::from(id))
     }
 
     fn action(&mut self) -> Result<Program, ParseError> {
@@ -262,7 +269,8 @@ impl<'a> Parser<'a> {
 
     fn name(&mut self) -> Result<TaskName, ParseError> {
         self.skip_whitespace();
-        TaskName::new(&self.text[self.position..]).ok_or(self.create_error(TokenError::InvalidTaskName))
+        TaskName::new(&self.text[self.position..])
+            .ok_or(self.create_error(TokenError::InvalidTaskName))
     }
 }
 
@@ -341,5 +349,16 @@ mod tests {
         let name = parser.name().unwrap();
 
         assert_eq!(name, "This is a test");
+    }
+
+    #[test_case("add", 3)]
+    #[test_case("85dfa", 5)]
+    fn id_should_parse_given_valid_input(input: &str, end: usize) {
+        let mut parser = Parser::new(input);
+
+        let result = parser.id().unwrap();
+
+        assert_eq!(result, input);
+        assert_eq!(parser.position, end);
     }
 }
