@@ -14,6 +14,7 @@ use today::{
     combine,
     formatter::{self, Cell, Field, ListFormatter, TodayFormatter, Visibility},
     monoid::{Last, Monoid},
+    parser::program::{Parser, Program},
     partial_config::{Build, Run, Select},
     semigroup::Semigroup,
     Task,
@@ -139,10 +140,13 @@ fn main() -> anyhow::Result<()> {
                 .value_of("name")
                 .and_then(TaskName::new)
                 .or_else(|| TaskName::new(&ui::prompt_name().ok()?))
-                .unwrap_or_else(|| panic!(
-                    "I expected a valid TaskName but could not construct one from the type {:?}",
-                    sub_matches.value_of("name") )
-                );
+                .unwrap_or_else(|| {
+                    panic!(
+                        "I expected a valid TaskName but could not construct one from the type \
+                         {:?}",
+                        sub_matches.value_of("name")
+                    )
+                });
 
             let due = if sub_matches.is_present("now") {
                 None
@@ -169,48 +173,32 @@ fn main() -> anyhow::Result<()> {
         Some(("edit", _sub_matches)) => {
             for line in io::stdin().lock().lines() {
                 let line = line?;
-                let (id, rest) = match line.split_once(|x: char| x.is_whitespace()) {
-                    Some(x) => x,
-                    None => {
-                        eprintln!("Could not parse id");
-                        continue;
-                    }
-                };
-                let filtered_tasks = tasks
-                    .iter()
-                    .filter(|x| x.id().to_string().starts_with(id))
-                    .collect::<Vec<_>>();
+                let mut parser = Parser::new(&line);
+                let program = parser.parse()?;
+                match program {
+                    Program::Edit { id, name, due } => {
+                        let filtered_tasks = tasks
+                            .iter()
+                            .filter(|x| x.id().to_string().starts_with(&id))
+                            .collect::<Vec<_>>();
 
-                match filtered_tasks.len() {
-                    0 => eprintln!("No task found with the id '{}'", id),
-                    1 => {
-                        let task = filtered_tasks[0];
-                        let (date, rest) = match parse_due(rest) {
-                            Ok((date, rest)) => (date, rest),
-                            Err(e) => {
-                                eprintln!("{e}");
-                                continue;
+                        match filtered_tasks.len() {
+                            0 => eprintln!("No task found with the id '{}'", id),
+                            1 => {
+                                let new_task = filtered_tasks[0].clone().with_name(name).with_due(due);
+                                if let Err(e) = tasks.edit(new_task) {
+                                    eprintln!("Unable to edit the task: {e}");
+                                }
                             }
-                        };
-
-                        let name = match TaskName::new(rest) {
-                            Some(name) => name,
-                            None => {
-                                eprintln!("Could not create task with name '{rest}'");
-                                continue;
-                            }
-                        };
-
-                        let new_task = task.clone().with_name(name).with_due(date);
-                        if let Err(e) = tasks.edit(new_task) {
-                            eprintln!("Unable to edit the task: {e}");
+                            _ => eprintln!(
+                                "More than one possible task was found with the id '{}'",
+                                id
+                            ),
                         }
                     }
-                    _ => eprintln!(
-                        "More than one possible task was found with the id '{}'",
-                        id
-                    ),
-                }
+                    Program::Add(task) => tasks.add(task),
+                    Program::Remove(partial_id) => cli::remove(&partial_id, &mut tasks)?,
+                };
             }
         }
         _ => {
@@ -228,20 +216,6 @@ fn main() -> anyhow::Result<()> {
     ))?;
 
     Ok(())
-}
-
-fn parse_due(input: &str) -> anyhow::Result<(Option<DateTime<Utc>>, &str)> {
-    if let Some((date, rest)) = input.trim().split_once(|x: char| x.is_whitespace()) {
-        if date.to_lowercase() == "now" {
-            return Ok((None, rest));
-        } else if let Some((time, rest)) = rest.trim().split_once(|x: char| x.is_whitespace()) {
-            let datetime = Utc.datetime_from_str(&[date, time].join(" "), "%Y-%m-%d %H:%M")?;
-
-            return Ok((Some(datetime), rest));
-        }
-    }
-
-    anyhow::bail!("Could not parse due date")
 }
 
 fn load_tasks(config: &AppPaths<Run>) -> anyhow::Result<TaskList> {
