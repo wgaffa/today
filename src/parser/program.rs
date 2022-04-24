@@ -3,16 +3,7 @@ use std::str::FromStr;
 use chrono::prelude::*;
 use thiserror::Error;
 
-use crate::{Task, TaskId, TaskName};
-
-// Instruction ::= New | Edit
-// Id ::= [0-9a-f]+
-// Date ::= ([0-9]+ '-' [0-9]+ '-' [0-9]+)
-// Time ::= [0-9]+ ':' [0-9]+
-// Name ::= All
-// DateTime ::= "Now" | Date Time
-// Edit ::= Id ("edit" | "rm" | "remove") DateTime Name
-// New ::= "new" Date Time? Name
+use crate::{Task, TaskName};
 
 #[derive(Debug, Clone)]
 pub enum Program {
@@ -22,7 +13,7 @@ pub enum Program {
         name: TaskName,
         due: Option<DateTime<Utc>>,
     },
-    Remove(TaskId),
+    Remove(String),
 }
 
 #[derive(Debug, Clone, Copy, Error)]
@@ -78,16 +69,7 @@ impl<'a> Parser<'a> {
         let next_pos = self.text[next_bounds..]
             .chars()
             .position(|x| !x.is_whitespace());
-        self.position = next_bounds + next_pos.unwrap_or_else(|| self.text.len() - next_bounds);
-    }
-
-    fn peek(&self) -> Option<char> {
-        let next_char_index = self.text.ceil_char_boundary(self.position + 1);
-        if next_char_index >= self.text.len() {
-            return None;
-        }
-
-        self.text[next_char_index..].chars().next()
+        self.position = next_bounds + next_pos.unwrap_or(self.text.len() - next_bounds);
     }
 
     pub fn parse(&mut self) -> Result<Program, ParseError> {
@@ -132,27 +114,33 @@ impl<'a> Parser<'a> {
                         let (ch, _) = self.get_char_at(self.position);
                         Err(self.create_error(TokenError::UnexpectedToken(ch.unwrap_or_default())))
                     }
-                    Action::Edit => {
-                        self.edit().map(|x| match x {
-                            Program::Edit{name, due, ..} => Program::Edit{id, name, due},
-                            _ => unreachable!(),
-                        })
-                    },
-                    Action::Remove => todo!(),
+                    Action::Edit => self.edit().map(|x| match x {
+                        Program::Edit { name, due, .. } => Program::Edit { id, name, due },
+                        _ => unreachable!(),
+                    }),
+                    Action::Remove => {
+                        self.remove();
+                        Ok(Program::Remove(id))
+                    }
                 }
             }
             None => Err(self.create_error(TokenError::UnexpectedEOF)),
         }
     }
 
+    fn remove(&mut self) {
+        self.position = self.text.len(); // Ignore the rest of the input
+    }
+
+    fn current_field(&self) -> &str {
+        self.text[self.position..]
+            .split_once(char::is_whitespace)
+            .map(|x| x.0)
+            .unwrap_or_else(|| &self.text[self.position..])
+    }
+
     fn add(&mut self) -> Result<Program, ParseError> {
-        let action = self.text[self.position..]
-            .chars()
-            .position(|x| x.is_whitespace())
-            .map_or_else(
-                || &self.text[self.position..],
-                |x| &self.text[self.position..x],
-            );
+        let action = self.current_field();
 
         if action == "new" {
             self.position += 3;
@@ -176,23 +164,23 @@ impl<'a> Parser<'a> {
         self.skip_whitespace();
         let name = self.name()?;
 
-        Ok(Program::Edit { id: Default::default(), due, name })
+        Ok(Program::Edit {
+            id: Default::default(),
+            due,
+            name,
+        })
     }
 
     fn id(&mut self) -> Result<String, ParseError> {
-        let (id, _) = self.text[self.position..]
-            .split_once(|x: char| x.is_whitespace())
-            .unwrap_or_else(|| (&self.text[self.position..], ""));
+        let id = self.current_field().to_owned();
 
         self.position += id.len();
-        Ok(String::from(id))
+        Ok(id)
     }
 
     fn action(&mut self) -> Result<Action, ParseError> {
         self.skip_whitespace();
-        let (action, _) = self.text[self.position..]
-            .split_once(char::is_whitespace)
-            .unwrap_or_else(|| (&self.text[self.position..], ""));
+        let action = self.current_field();
 
         let action_length = action.len();
         let action = match action {
@@ -204,7 +192,7 @@ impl<'a> Parser<'a> {
             ))),
         };
 
-        if let Ok(_) = action {
+        if action.is_ok() {
             self.position += action_length;
         }
 
@@ -218,13 +206,7 @@ impl<'a> Parser<'a> {
         match current_char {
             None => Err(self.create_error(TokenError::UnexpectedEOF)),
             Some(ch) if ch == 'N' => {
-                let keyword = self.text[self.position..]
-                    .chars()
-                    .position(|x| x.is_whitespace())
-                    .map_or_else(
-                        || &self.text[self.position..],
-                        |x| &self.text[self.position..x],
-                    );
+                let keyword = self.current_field();
 
                 if keyword == "Now" {
                     self.position += 3;
@@ -243,8 +225,8 @@ impl<'a> Parser<'a> {
 
                 Utc.from_utc_date(&date)
                     .and_time(time)
-                    .map(|x| Some(x))
-                    .ok_or(self.create_error(TokenError::InvalidDue))
+                    .map(Some)
+                    .ok_or_else(|| self.create_error(TokenError::InvalidDue))
             }
         }
     }
@@ -267,32 +249,32 @@ impl<'a> Parser<'a> {
         let year = self.text[self.position..]
             .chars()
             .position(is_dash)
-            .ok_or(self.create_error(TokenError::UnexpectedEOF))
+            .ok_or_else(|| self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| self.parse_type(x))?;
 
         let month = self.text[self.position..]
             .chars()
             .position(is_dash)
-            .ok_or(self.create_error(TokenError::UnexpectedEOF))
+            .ok_or_else(|| self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| self.parse_type(x))?;
 
         let index = self.text[self.position..]
             .chars()
             .position(|x| x.is_whitespace())
-            .unwrap_or_else(|| self.text.len() - self.position);
+            .unwrap_or(self.text.len() - self.position);
         let day = self.text[self.position..self.position + index]
             .parse::<u32>()
             .map_err(|_| self.create_error(TokenError::InvalidDue))?;
         self.position += index;
 
-        NaiveDate::from_ymd_opt(year, month, day).ok_or(self.create_error(TokenError::InvalidDue))
+        NaiveDate::from_ymd_opt(year, month, day).ok_or_else(|| self.create_error(TokenError::InvalidDue))
     }
 
     fn time(&mut self) -> Result<NaiveTime, ParseError> {
         let hour = self.text[self.position..]
             .chars()
             .position(|x| x == ':')
-            .ok_or(self.create_error(TokenError::UnexpectedEOF))
+            .ok_or_else(|| self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| {
                 let pos = self.position;
                 self.position += x + 1;
@@ -304,8 +286,8 @@ impl<'a> Parser<'a> {
         let minute = self.text[self.position..]
             .chars()
             .position(|x| x.is_whitespace())
-            .or_else(|| Some(self.text.len() - self.position))
-            .ok_or(self.create_error(TokenError::UnexpectedEOF))
+            .or(Some(self.text.len() - self.position))
+            .ok_or_else(|| self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| {
                 let pos = self.position;
                 self.position += x;
@@ -314,13 +296,13 @@ impl<'a> Parser<'a> {
                     .map_err(|_| self.create_error(TokenError::InvalidDue))
             })?;
 
-        NaiveTime::from_hms_opt(hour, minute, 0).ok_or(self.create_error(TokenError::InvalidDue))
+        NaiveTime::from_hms_opt(hour, minute, 0).ok_or_else(|| self.create_error(TokenError::InvalidDue))
     }
 
     fn name(&mut self) -> Result<TaskName, ParseError> {
         self.skip_whitespace();
         let name = TaskName::new(&self.text[self.position..])
-            .ok_or(self.create_error(TokenError::InvalidTaskName));
+            .ok_or_else(|| self.create_error(TokenError::InvalidTaskName));
 
         self.position = self.text.len();
         name
@@ -472,6 +454,20 @@ mod tests {
                 assert_eq!(id, "4df78");
                 assert_eq!(name, "4th july dinner, not lunch");
                 assert_eq!(due, Some(Utc.ymd(2022, 5, 4).and_hms(18, 0, 0)));
+            }
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn parse_should_parse_remove_given_valid_input() {
+        let mut parser = Parser::new("4df78 remove 2022-05-04 18:00 4th july dinner, not lunch");
+
+        let result = parser.parse().unwrap();
+
+        match result {
+            Program::Remove(id) => {
+                assert_eq!(id, "4df78");
             }
             _ => assert!(false),
         }
