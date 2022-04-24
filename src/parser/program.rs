@@ -83,7 +83,7 @@ impl<'a> Parser<'a> {
     pub fn parse(&mut self) -> Result<Program, ParseError> {
         let instruction = self.instruction()?;
 
-        if self.position <= self.text.len() {
+        if self.position < self.text.len() {
             let (ch, _) = self.get_char_at(self.position);
             Err(self.create_error(TokenError::ExpectedEOF(ch.unwrap_or_default())))
         } else {
@@ -108,14 +108,13 @@ impl<'a> Parser<'a> {
 
     fn instruction(&mut self) -> Result<Program, ParseError> {
         self.skip_whitespace();
-        let next_char = self
-            .peek()
-            .ok_or(self.create_error(TokenError::UnexpectedEOF))?;
+        let (ch, index) = self.get_char_at(self.position);
+        self.position = index;
 
-        if next_char == 'n' {
-            self.add()
-        } else {
-            self.edit()
+        match ch {
+            Some(ch) if ch == 'n' => self.add(),
+            Some(_) => self.edit(),
+            None => Err(self.create_error(TokenError::UnexpectedEOF))
         }
     }
 
@@ -256,7 +255,6 @@ impl<'a> Parser<'a> {
             .or_else(|| Some(self.text.len() - self.position))
             .ok_or(self.create_error(TokenError::UnexpectedEOF))
             .and_then(|x| {
-                dbg!(x);
                 let pos = self.position;
                 self.position += x;
                 self.text[pos..pos + x]
@@ -269,8 +267,11 @@ impl<'a> Parser<'a> {
 
     fn name(&mut self) -> Result<TaskName, ParseError> {
         self.skip_whitespace();
-        TaskName::new(&self.text[self.position..])
-            .ok_or(self.create_error(TokenError::InvalidTaskName))
+        let name = TaskName::new(&self.text[self.position..])
+            .ok_or(self.create_error(TokenError::InvalidTaskName));
+
+        self.position = self.text.len();
+        name
     }
 }
 
@@ -372,6 +373,21 @@ mod tests {
             Program::Add(task) => {
                 assert_eq!(task.name(), "It's Christmas everybody");
                 assert_eq!(task.due(), Some(&Utc.ymd(2022, 12, 24).and_hms(0, 0, 0)));
+            }
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_should_parse_new_given_valid_input() {
+        let mut parser = Parser::new("new 2022-05-04 12:00 4th of july lunch");
+
+        let result = parser.parse().unwrap();
+
+        match result {
+            Program::Add(task) => {
+                assert_eq!(task.name(), "4th of july lunch");
+                assert_eq!(task.due(), Some(&Utc.ymd(2022, 5, 4).and_hms(12, 0, 0)));
             }
             _ => assert!(false)
         }
