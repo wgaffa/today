@@ -17,7 +17,11 @@ use crate::{Task, TaskId, TaskName};
 #[derive(Debug, Clone)]
 pub enum Program {
     Add(Task),
-    Edit(Task),
+    Edit {
+        id: String,
+        name: TaskName,
+        due: Option<DateTime<Utc>>,
+    },
     Remove(TaskId),
 }
 
@@ -51,6 +55,12 @@ impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "@{}: {:?}", self.col, self.source)
     }
+}
+
+enum Action {
+    Edit,
+    Add,
+    Remove,
 }
 
 pub struct Parser<'a> {
@@ -113,8 +123,25 @@ impl<'a> Parser<'a> {
 
         match ch {
             Some(ch) if ch == 'n' => self.add(),
-            Some(_) => self.edit(),
-            None => Err(self.create_error(TokenError::UnexpectedEOF))
+            Some(_) => {
+                let id = self.id()?;
+                let action = self.action().unwrap_or(Action::Edit);
+
+                match action {
+                    Action::Add => {
+                        let (ch, _) = self.get_char_at(self.position);
+                        Err(self.create_error(TokenError::UnexpectedToken(ch.unwrap_or_default())))
+                    }
+                    Action::Edit => {
+                        self.edit().map(|x| match x {
+                            Program::Edit{name, due, ..} => Program::Edit{id, name, due},
+                            _ => unreachable!(),
+                        })
+                    },
+                    Action::Remove => todo!(),
+                }
+            }
+            None => Err(self.create_error(TokenError::UnexpectedEOF)),
         }
     }
 
@@ -143,7 +170,13 @@ impl<'a> Parser<'a> {
     }
 
     fn edit(&mut self) -> Result<Program, ParseError> {
-        todo!()
+        self.skip_whitespace();
+        let due = self.datetime()?;
+
+        self.skip_whitespace();
+        let name = self.name()?;
+
+        Ok(Program::Edit { id: Default::default(), due, name })
     }
 
     fn id(&mut self) -> Result<String, ParseError> {
@@ -155,8 +188,27 @@ impl<'a> Parser<'a> {
         Ok(String::from(id))
     }
 
-    fn action(&mut self) -> Result<Program, ParseError> {
-        todo!()
+    fn action(&mut self) -> Result<Action, ParseError> {
+        self.skip_whitespace();
+        let (action, _) = self.text[self.position..]
+            .split_once(char::is_whitespace)
+            .unwrap_or_else(|| (&self.text[self.position..], ""));
+
+        let action_length = action.len();
+        let action = match action {
+            "edit" => Ok(Action::Edit),
+            "new" => Ok(Action::Add),
+            "remove" => Ok(Action::Remove),
+            _ => Err(self.create_error(TokenError::UnexpectedToken(
+                self.get_char_at(self.position).0.unwrap_or_default(),
+            ))),
+        };
+
+        if let Ok(_) = action {
+            self.position += action_length;
+        }
+
+        action
     }
 
     fn datetime(&mut self) -> Result<Option<DateTime<Utc>>, ParseError> {
@@ -374,7 +426,7 @@ mod tests {
                 assert_eq!(task.name(), "It's Christmas everybody");
                 assert_eq!(task.due(), Some(&Utc.ymd(2022, 12, 24).and_hms(0, 0, 0)));
             }
-            _ => assert!(false)
+            _ => assert!(false),
         }
     }
 
@@ -389,7 +441,39 @@ mod tests {
                 assert_eq!(task.name(), "4th of july lunch");
                 assert_eq!(task.due(), Some(&Utc.ymd(2022, 5, 4).and_hms(12, 0, 0)));
             }
-            _ => assert!(false)
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn parse_should_parse_edit_given_valid_input() {
+        let mut parser = Parser::new("4df78 2022-05-04 18:00 4th july dinner, not lunch");
+
+        let result = parser.parse().unwrap();
+
+        match result {
+            Program::Edit { id, name, due } => {
+                assert_eq!(id, "4df78");
+                assert_eq!(name, "4th july dinner, not lunch");
+                assert_eq!(due, Some(Utc.ymd(2022, 5, 4).and_hms(18, 0, 0)));
+            }
+            _ => assert!(false),
+        }
+    }
+
+    #[test]
+    fn parse_should_parse_edit_given_valid_input_with_action() {
+        let mut parser = Parser::new("4df78 edit 2022-05-04 18:00 4th july dinner, not lunch");
+
+        let result = parser.parse().unwrap();
+
+        match result {
+            Program::Edit { id, name, due } => {
+                assert_eq!(id, "4df78");
+                assert_eq!(name, "4th july dinner, not lunch");
+                assert_eq!(due, Some(Utc.ymd(2022, 5, 4).and_hms(18, 0, 0)));
+            }
+            _ => assert!(false),
         }
     }
 }
