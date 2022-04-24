@@ -26,7 +26,7 @@ pub enum TokenError {
     #[error("Could not parse task name")]
     InvalidTaskName,
     #[error("Unable to parse due date")]
-    InvalidTime,
+    InvalidDue,
     #[error("Expected end of string, got '{0}'")]
     ExpectedEOF(char),
     #[error("Unexpected token '{0}'")]
@@ -193,7 +193,7 @@ impl<'a> Parser<'a> {
                 Utc.from_utc_date(&date)
                     .and_time(time)
                     .map(|x| Some(x))
-                    .ok_or(self.create_error(TokenError::InvalidTime))
+                    .ok_or(self.create_error(TokenError::InvalidDue))
             }
         }
     }
@@ -231,10 +231,10 @@ impl<'a> Parser<'a> {
             .unwrap_or_else(|| self.text.len() - self.position);
         let day = self.text[self.position..self.position + index]
             .parse::<u32>()
-            .map_err(|_| self.create_error(TokenError::InvalidTime))?;
+            .map_err(|_| self.create_error(TokenError::InvalidDue))?;
         self.position += index;
 
-        NaiveDate::from_ymd_opt(year, month, day).ok_or(self.create_error(TokenError::InvalidTime))
+        NaiveDate::from_ymd_opt(year, month, day).ok_or(self.create_error(TokenError::InvalidDue))
     }
 
     fn time(&mut self) -> Result<NaiveTime, ParseError> {
@@ -247,7 +247,7 @@ impl<'a> Parser<'a> {
                 self.position += x + 1;
                 self.text[pos..pos + x]
                     .parse::<u32>()
-                    .map_err(|_| self.create_error(TokenError::InvalidTime))
+                    .map_err(|_| self.create_error(TokenError::InvalidDue))
             })?;
 
         let minute = self.text[self.position..]
@@ -261,10 +261,10 @@ impl<'a> Parser<'a> {
                 self.position += x;
                 self.text[pos..pos + x]
                     .parse::<u32>()
-                    .map_err(|_| self.create_error(TokenError::InvalidTime))
+                    .map_err(|_| self.create_error(TokenError::InvalidDue))
             })?;
 
-        NaiveTime::from_hms_opt(hour, minute, 0).ok_or(self.create_error(TokenError::InvalidTime))
+        NaiveTime::from_hms_opt(hour, minute, 0).ok_or(self.create_error(TokenError::InvalidDue))
     }
 
     fn name(&mut self) -> Result<TaskName, ParseError> {
