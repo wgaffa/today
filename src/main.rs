@@ -52,6 +52,17 @@ impl AppPaths<Run> {
     }
 }
 
+impl std::fmt::Display for AppPaths<Run> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "config-dir: {}\ndata-dir: {}",
+            self.config.value().to_string_lossy(),
+            self.data.value().to_string_lossy()
+        )
+    }
+}
+
 today::semigroup_default!(AppPaths<Build>: config, data);
 today::monoid_default!(AppPaths<Build>: config, data);
 
@@ -201,6 +212,7 @@ fn main() -> anyhow::Result<()> {
                 };
             }
         }
+        Some(("config", _sub_matches)) => println!("{config}"),
         _ => {
             interactive(&mut tasks)?;
         }

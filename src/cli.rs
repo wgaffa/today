@@ -48,6 +48,10 @@ pub fn options() -> ArgMatches {
             Command::new("edit")
                 .about("Edit one or more tasks")
         )
+        .subcommand(
+            Command::new("config")
+                .about("Print the current configuration for this run")
+        )
         .get_matches()
 }
 
