@@ -196,7 +196,8 @@ fn main() -> anyhow::Result<()> {
                         match filtered_tasks.len() {
                             0 => eprintln!("No task found with the id '{}'", id),
                             1 => {
-                                let new_task = filtered_tasks[0].clone().with_name(name).with_due(due);
+                                let new_task =
+                                    filtered_tasks[0].clone().with_name(name).with_due(due);
                                 if let Err(e) = tasks.edit(new_task) {
                                     eprintln!("Unable to edit the task: {e}");
                                 }
