@@ -210,6 +210,7 @@ fn main() -> anyhow::Result<()> {
                     }
                     Program::Add(task) => tasks.add(task),
                     Program::Remove(partial_id) => cli::remove(&partial_id, &mut tasks)?,
+                    _ => {}
                 };
             }
         }

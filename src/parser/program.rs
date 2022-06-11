@@ -5,7 +5,7 @@ use thiserror::Error;
 
 use crate::{Task, TaskName};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Program {
     Add(Task),
     Edit {
@@ -14,6 +14,7 @@ pub enum Program {
         due: Option<DateTime<Utc>>,
     },
     Remove(String),
+    Empty,
 }
 
 #[derive(Debug, Clone, Copy, Error)]
@@ -73,6 +74,10 @@ impl<'a> Parser<'a> {
     }
 
     pub fn parse(&mut self) -> Result<Program, ParseError> {
+        if self.text.trim().is_empty() {
+            return Ok(Program::Empty);
+        }
+
         let instruction = self.instruction()?;
 
         if self.position < self.text.len() {
@@ -471,5 +476,14 @@ mod tests {
             }
             _ => assert!(false),
         }
+    }
+
+    #[test]
+    fn parse_should_ignore_empty_input() {
+        let mut parser = Parser::new("    ");
+
+        let result = parser.parse().unwrap();
+
+        assert_eq!(result, Program::Empty);
     }
 }
