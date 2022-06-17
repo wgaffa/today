@@ -23,6 +23,7 @@ use today::{
     TaskName,
 };
 
+mod app;
 mod cli;
 mod commands;
 mod ui;
