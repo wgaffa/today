@@ -62,11 +62,28 @@ impl<M, A> Select<Run, M, A> {
     }
 }
 
-impl<M, A> From<M> for Select<Build, M, A> {
-    fn from(value: M) -> Self {
+impl<M, A> From<Option<A>> for Select<Build, M, A>
+where
+    M: Monoid,
+    Option<A>: Into<M>,
+{
+    fn from(value: Option<A>) -> Self {
         Self {
-            inner: Selection::Build(value),
-            _phantom_data: PhantomData,
+            inner: Selection::Build(value.into()),
+            _phantom_data: PhantomData
+        }
+    }
+}
+
+impl<M, A> From<A> for Select<Build, M, A>
+where
+    M: Monoid,
+    A: Into<M>,
+{
+    fn from(value: A) -> Self {
+        Self {
+            inner: Selection::Build(value.into()),
+            _phantom_data: PhantomData
         }
     }
 }

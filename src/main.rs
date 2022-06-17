@@ -10,6 +10,7 @@ use std::{
 use anyhow::Context;
 use chrono::{prelude::*, NaiveDateTime};
 
+use clap::ArgMatches;
 use today::{
     combine,
     formatter::{self, Cell, Field, ListFormatter, TodayFormatter, Visibility},
@@ -26,11 +27,15 @@ mod cli;
 mod commands;
 mod ui;
 
+use commands::Command;
+
 today::config!(
     derive(Debug, Default)
     AppPaths {
         config: Last<PathBuf> => PathBuf,
         data: Last<PathBuf> => PathBuf,
+        detached: Last<bool> => bool,
+        command: Last<Command> => Command,
     }
 );
 
@@ -39,6 +44,8 @@ impl AppPaths<Build> {
         AppPaths {
             config: self.config.get().0.unwrap_or_default().into(),
             data: self.data.get().0.unwrap_or_default().into(),
+            detached: self.detached.get().0.unwrap_or_default().into(),
+            command: self.command.get().0.unwrap_or_default().into(),
         }
     }
 }
@@ -48,6 +55,8 @@ impl AppPaths<Run> {
         AppPaths {
             config: self.config.into(),
             data: self.data.into(),
+            detached: self.detached.into(),
+            command: self.command.into(),
         }
     }
 }
@@ -63,35 +72,27 @@ impl std::fmt::Display for AppPaths<Run> {
     }
 }
 
-today::semigroup_default!(AppPaths<Build>: config, data);
-today::monoid_default!(AppPaths<Build>: config, data);
+today::semigroup_default!(AppPaths<Build>: config, data, detached, command);
+today::monoid_default!(AppPaths<Build>: config, data, detached, command);
 
-macro_rules! env_paths {
-    ($t:ident , $($i:ident as $e:expr => $f:expr),* $(,)?) => {
-        $t {
-            $(
-                $i: env::var($e).ok().map($f).unwrap_or_default().into(),
-            )*
-        }
+macro_rules! convert_env {
+    ($e:expr , $f:expr) => {
+        env::var($e).ok().map($f).into()
     };
 }
 
 fn read_env() -> anyhow::Result<AppPaths<Build>> {
-    Ok(env_paths! {
-        AppPaths,
-        config as "TODAY_CONFIG_PATH" => |x| Last::from(PathBuf::from(x)),
-        data as "TODAY_DATA_PATH" => |x| Last::from(PathBuf::from(x)),
+    Ok(AppPaths {
+        config: convert_env!("TODAY_CONFIG_PATH", PathBuf::from),
+        data: convert_env!("TODAY_DATA_PATH", PathBuf::from),
+        ..Default::default()
     })
 }
 
-macro_rules! xdg_paths {
-    ($t:ident , $($i:ident as $e:expr => $f:expr),* $(,)?) => (
-        $t {
-            $(
-                $i: $e.map($f).unwrap_or_default().into(),
-            )*
-        }
-    )
+macro_rules! convert_xdg {
+    ($e:expr, $f:expr) => {
+        $e.map($f).unwrap_or_default().into()
+    };
 }
 
 fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
@@ -99,11 +100,32 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
         x.push("today");
         x
     };
-    Ok(xdg_paths! {
-        AppPaths,
-        config as dirs::config_dir() => |x| Last::from(push_app_id(x)),
-        data as dirs::data_dir() => |x| Last::from(push_app_id(x)),
+    Ok(AppPaths {
+        config: convert_xdg!(dirs::config_dir(), push_app_id),
+        data: convert_xdg!(dirs::data_dir(), push_app_id),
+        ..Default::default()
     })
+}
+
+fn read_args(args: &ArgMatches) -> AppPaths<Build> {
+    if let Some((subcommand, matches)) = args.subcommand() {
+        let command = subcommand
+            .parse::<Command>()
+            .expect("Parsing command failed")
+            .into();
+        let detached = matches
+            .try_contains_id("detached")
+            .unwrap_or_default()
+            .into();
+
+        AppPaths {
+            detached,
+            command,
+            ..Default::default()
+        }
+    } else {
+        Default::default()
+    }
 }
 
 fn main() -> anyhow::Result<()> {
@@ -113,6 +135,7 @@ fn main() -> anyhow::Result<()> {
         AppPaths::empty() =>
             read_xdg().unwrap_or_default(),
             read_env().unwrap_or_default(),
+            read_args(&matches)
     }
     .build();
 
