@@ -46,22 +46,18 @@ pub fn options() -> ArgMatches {
                         .required(false)
                         .value_name("NAME")
                         .validator(|x| {
-                            TaskName::new(x).ok_or_else(|| anyhow::anyhow!(
-                                "A task name must have atleast one printable character"
-                            ))
+                            TaskName::new(x).ok_or_else(|| {
+                                anyhow::anyhow!(
+                                    "A task name must have atleast one printable character"
+                                )
+                            })
                         })
                         .help("The task name to be done at the specified due date"),
                 ])
                 .about("Add a new task"),
         )
-        .subcommand(
-            Command::new("edit")
-                .about("Edit one or more tasks")
-        )
-        .subcommand(
-            Command::new("config")
-                .about("Print the current configuration for this run")
-        )
+        .subcommand(Command::new("edit").about("Edit one or more tasks"))
+        .subcommand(Command::new("config").about("Print the current configuration for this run"))
         .get_matches()
 }
 

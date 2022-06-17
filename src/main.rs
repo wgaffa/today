@@ -204,7 +204,8 @@ fn main() -> anyhow::Result<()> {
 
             cli::add(name, due, &mut tasks)?;
         }
-        Some(("edit", _sub_matches)) => {
+        Some(("edit", _sub_matches)) =>
+        {
             #[allow(clippy::significant_drop_in_scrutinee)]
             for line in io::stdin().lock().lines() {
                 let line = line?;
