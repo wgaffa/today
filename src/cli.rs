@@ -1,5 +1,5 @@
 use chrono::{prelude::*, NaiveDateTime};
-use clap::{command, Arg, ArgMatches, Command};
+use clap::{command, Arg, ArgAction, ArgMatches, Command};
 
 use today::{Task, TaskList, TaskName};
 
@@ -7,7 +7,17 @@ pub fn options() -> ArgMatches {
     command!()
         .about("Manage tasks to do today")
         .subcommand(Command::new("list").about("List all tasks"))
-        .subcommand(Command::new("today").about("List tasks that are due today"))
+        .subcommand(
+            Command::new("today")
+                .arg(
+                    Arg::new("detached")
+                        .short('d')
+                        .long("detached")
+                        .action(ArgAction::SetTrue)
+                        .help("Run in detached mode"),
+                )
+                .about("List tasks that are due today"),
+        )
         .subcommand(
             Command::new("remove")
                 .arg(
