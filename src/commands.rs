@@ -1,6 +1,35 @@
+use std::str::FromStr;
+
 use itertools::Itertools;
 
 use today::{formatter::TaskFormatter, Task, TaskList};
+
+#[non_exhaustive]
+#[derive(Debug, Default)]
+pub enum Command {
+    Add,
+    List,
+    Remove,
+    Today,
+    Edit,
+    #[default]
+    Interactive,
+}
+
+impl FromStr for Command {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "add" => Ok(Command::Add),
+            "list" => Ok(Command::List),
+            "remove" => Ok(Command::Remove),
+            "today" => Ok(Command::Today),
+            "edit" => Ok(Command::Edit),
+            _ => Err(()),
+        }
+    }
+}
 
 pub fn add<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
 where
