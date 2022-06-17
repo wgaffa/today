@@ -6,6 +6,12 @@ use today::{Task, TaskList, TaskName};
 pub fn options() -> ArgMatches {
     command!()
         .about("Manage tasks to do today")
+        .args(&[
+            Arg::new("config")
+                .long("config-only")
+                .action(ArgAction::SetTrue)
+                .help("Print only the configuration of this run but don't run it"),
+        ])
         .subcommand(Command::new("list").about("List all tasks"))
         .subcommand(
             Command::new("today")
@@ -57,7 +63,6 @@ pub fn options() -> ArgMatches {
                 .about("Add a new task"),
         )
         .subcommand(Command::new("edit").about("Edit one or more tasks"))
-        .subcommand(Command::new("config").about("Print the current configuration for this run"))
         .get_matches()
 }
 

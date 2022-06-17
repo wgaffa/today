@@ -113,7 +113,7 @@ fn read_args(args: &ArgMatches) -> AppPaths<Build> {
     if let Some((subcommand, matches)) = args.subcommand() {
         let command = subcommand
             .parse::<Command>()
-            .expect("Parsing command failed")
+            .expect(&format!("Parsing '{}' failed", subcommand))
             .into();
         let detached = matches
             .try_contains_id("detached")
