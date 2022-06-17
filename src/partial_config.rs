@@ -59,6 +59,19 @@ impl<M, A> Select<Run, M, A> {
     }
 }
 
+impl<M, A> Select<Run, M, A>
+where
+    A: Default,
+{
+    pub fn take(&mut self) -> A {
+        if let Selection::Run(ref mut x) = self.inner {
+            std::mem::take(x)
+        } else {
+            panic!("Select in wrong state")
+        }
+    }
+}
+
 impl<M, A> From<Option<A>> for Select<Build, M, A>
 where
     M: Monoid,

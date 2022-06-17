@@ -1,4 +1,4 @@
-use chrono::{prelude::*, NaiveDateTime};
+use chrono::prelude::*;
 use clap::{command, Arg, ArgAction, ArgMatches, Command};
 
 use today::{Task, TaskList, TaskName};
@@ -46,7 +46,14 @@ pub fn options() -> ArgMatches {
                         .short('d')
                         .long("due")
                         .takes_value(true)
-                        .validator(|x| NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M"))
+                        .value_parser(clap::builder::ValueParser::new(|x: &str| {
+                            NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M")
+                                .or(
+                                    NaiveDate::parse_from_str(x, "%Y-%m-%d")
+                                        .map(|x| x.and_hms(0, 0, 0))
+                                )
+                                .map(|x| Utc.from_local_datetime(&x).unwrap())
+                        }))
                         .help("Set the due date in the format YYYY-MM-DD HH:MM"),
                     Arg::new("name")
                         .required(false)

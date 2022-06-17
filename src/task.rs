@@ -1,11 +1,11 @@
-use std::convert::AsRef;
+use std::ops::Deref;
 
 use chrono::prelude::*;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
-use uuid::Uuid;
 
+use uuid::Uuid;
 /// `TaskName` is a any non empty string with at least one printable character with surrounding
 /// whitespaces trimmed. `TaskName` is compared case insensitive.
 /// ```
@@ -222,10 +222,7 @@ impl TaskList {
     }
 
     pub fn edit(&mut self, task: Task) -> Result<Task, TaskError> {
-        let filtered_tasks = self
-            .tasks
-            .iter()
-            .position(|x| x.id() == task.id());
+        let filtered_tasks = self.tasks.iter().position(|x| x.id() == task.id());
 
         match filtered_tasks {
             None => Err(TaskError::InvalidId(task.id().clone())),
@@ -256,9 +253,46 @@ impl Default for TaskList {
     }
 }
 
+impl From<&[Task]> for TaskList {
+    fn from(value: &[Task]) -> Self {
+        let tasks = value.iter().cloned().sorted().dedup().collect::<Vec<_>>();
+        Self { tasks }
+    }
+}
+
+impl From<Vec<Task>> for TaskList {
+    fn from(other: Vec<Task>) -> Self {
+        let tasks = other.into_iter().sorted().dedup().collect::<Vec<_>>();
+        Self { tasks }
+    }
+}
+
+impl Deref for TaskList {
+    type Target = [Task];
+
+    fn deref(&self) -> &Self::Target {
+        self.as_slice()
+    }
+}
+
+impl<'a> IntoIterator for &'a TaskList {
+    type Item = &'a Task;
+    type IntoIter = std::slice::Iter<'a, Task>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.as_slice().into_iter()
+    }
+}
+
 impl std::iter::Extend<Task> for TaskList {
     fn extend<T: IntoIterator<Item = Task>>(&mut self, iter: T) {
-        self.tasks.extend(iter.into_iter().sorted().dedup());
+        for task in iter {
+            if self.tasks.iter().any(|x| x.id == task.id) {
+                continue;
+            }
+
+            self.tasks.push(task);
+        }
     }
 }
 

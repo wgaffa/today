@@ -1,34 +1,23 @@
-use std::str::FromStr;
-
+use chrono::prelude::*;
 use itertools::Itertools;
 
-use today::{formatter::TaskFormatter, Task, TaskList};
+use today::{formatter::TaskFormatter, parser::program::Program, Task, TaskList};
 
 #[non_exhaustive]
-#[derive(Debug, Default, Clone, Copy)]
+#[derive(Debug, Default, Clone)]
 pub enum Command {
-    Add,
+    Add {
+        name: Option<String>,
+        due: Option<Option<DateTime<Utc>>>,
+    },
     List,
-    Remove,
+    Remove(String),
     Today,
-    Edit,
+    Edit {
+        program: Vec<Program>,
+    },
     #[default]
     Interactive,
-}
-
-impl FromStr for Command {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "add" => Ok(Command::Add),
-            "list" => Ok(Command::List),
-            "remove" => Ok(Command::Remove),
-            "today" => Ok(Command::Today),
-            "edit" => Ok(Command::Edit),
-            _ => Err(()),
-        }
-    }
 }
 
 pub fn add<F>(input: F, tasks: &mut TaskList) -> anyhow::Result<()>
@@ -56,15 +45,18 @@ where
     Ok(())
 }
 
-pub fn list<T: TaskFormatter>(tasks: &TaskList, f: &T) -> anyhow::Result<()> {
-    let mut tasks = tasks.iter().collect::<Vec<_>>();
-    tasks.sort_by(|&x, &y| x.due().cmp(&y.due()));
+pub fn list<'a, T, I>(tasks: I, f: &T) -> String
+where
+    T: TaskFormatter,
+    I: IntoIterator<Item = &'a Task>,
+{
+    let output = tasks
+        .into_iter()
+        .sorted_by(|x, y| x.due().cmp(&y.due()))
+        .map(|x| f.format(x))
+        .collect::<Vec<_>>();
 
-    for task in tasks {
-        println!("{}", <T as TaskFormatter>::format(f, task));
-    }
-
-    Ok(())
+    output.join("\n")
 }
 
 pub fn shortest_id_length(tasks: &[Task]) -> usize {
@@ -122,12 +114,4 @@ pub fn shortest_id_length(tasks: &[Task]) -> usize {
 
     let count = prefixes.iter().map(|x| x.len()).max().unwrap();
     count
-}
-
-pub fn today<T: TaskFormatter>(tasks: &mut TaskList, f: &T) -> anyhow::Result<()> {
-    for task in tasks.today() {
-        println!("{}", <T as TaskFormatter>::format(f, task));
-    }
-
-    Ok(())
 }
