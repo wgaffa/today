@@ -1,25 +1,22 @@
 use std::marker::PhantomData;
 
-use crate::{
-    monoid::Monoid,
-    semigroup::Semigroup,
-};
+use crate::{monoid::Monoid, semigroup::Semigroup};
 
 use today_derive::Semigroup;
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub struct Build;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Run;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 enum Selection<M, A> {
     Build(M),
     Run(A),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Select<T, M, A> {
     inner: Selection<M, A>,
     _phantom_data: PhantomData<T>,
@@ -70,7 +67,7 @@ where
     fn from(value: Option<A>) -> Self {
         Self {
             inner: Selection::Build(value.into()),
-            _phantom_data: PhantomData
+            _phantom_data: PhantomData,
         }
     }
 }
@@ -83,7 +80,7 @@ where
     fn from(value: A) -> Self {
         Self {
             inner: Selection::Build(value.into()),
-            _phantom_data: PhantomData
+            _phantom_data: PhantomData,
         }
     }
 }

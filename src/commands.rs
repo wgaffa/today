@@ -5,7 +5,7 @@ use itertools::Itertools;
 use today::{formatter::TaskFormatter, Task, TaskList};
 
 #[non_exhaustive]
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone, Copy)]
 pub enum Command {
     Add,
     List,

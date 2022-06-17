@@ -1,6 +1,7 @@
 use std::convert::AsRef;
 
 use chrono::prelude::*;
+use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use uuid::Uuid;
@@ -62,7 +63,7 @@ impl AsRef<String> for TaskName {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 #[serde(transparent)]
 pub struct TaskId(Uuid);
 
@@ -90,7 +91,7 @@ impl Default for TaskId {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, PartialOrd, Ord)]
 pub struct Task {
     #[serde(default)]
     id: TaskId,
@@ -252,6 +253,12 @@ impl TaskList {
 impl Default for TaskList {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+impl std::iter::Extend<Task> for TaskList {
+    fn extend<T: IntoIterator<Item = Task>>(&mut self, iter: T) {
+        self.tasks.extend(iter.into_iter().sorted().dedup());
     }
 }
 

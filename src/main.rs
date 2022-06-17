@@ -17,6 +17,7 @@ use today::{
     monoid::{Last, Monoid},
     parser::program::{Parser, Program},
     partial_config::{Build, Run, Select},
+    repository::Repository,
     semigroup::Semigroup,
     Task,
     TaskList,
@@ -31,7 +32,7 @@ mod ui;
 use commands::Command;
 
 today::config!(
-    derive(Debug, Default)
+    derive(Debug, Default, Clone)
     AppPaths {
         config: Last<PathBuf> => PathBuf,
         data: Last<PathBuf> => PathBuf,
@@ -140,7 +141,16 @@ fn main() -> anyhow::Result<()> {
     }
     .build();
 
-    let mut tasks = load_tasks(&config)?;
+    let mut path = config.data.value().to_owned();
+    path.push("today.json");
+    let mut json = today::json::JsonRepository::new(&path);
+
+    let mut tasks = TaskList::new();
+    tasks.extend(json.all().map(|x| x.to_vec())?);
+
+    let old_conf = config.clone();
+    let app = app::App::new(config, json);
+
     match matches.subcommand() {
         Some(("list", _sub_matches)) => {
             let shortest_id = commands::shortest_id_length(tasks.as_slice()).max(5);
@@ -240,42 +250,19 @@ fn main() -> anyhow::Result<()> {
                 };
             }
         }
-        Some(("config", _sub_matches)) => println!("{config}"),
+        Some(("config", _sub_matches)) => println!("{old_conf}"),
         _ => {
             interactive(&mut tasks)?;
         }
     }
 
-    let mut task_path = config.data.value().to_owned();
-    task_path.push("tasks.json");
-
     let db = tasks.iter().collect::<Vec<_>>();
-    save_tasks(&db, &task_path).context(format!(
+    save_tasks(&db, &path).context(format!(
         "Could not save to file '{}'",
-        task_path.to_str().unwrap_or_default()
+        path.to_str().unwrap_or_default()
     ))?;
 
     Ok(())
-}
-
-fn load_tasks(config: &AppPaths<Run>) -> anyhow::Result<TaskList> {
-    let mut task_path = config.data.value().to_owned();
-    task_path.push("tasks.json");
-
-    let file_content = match fs::read_to_string(&task_path) {
-        Err(err) if err.kind() == ErrorKind::NotFound => Ok(String::from("[]")),
-        Err(err) => Err(err).context(format!(
-            "Could not open file '{}'",
-            task_path.to_str().unwrap_or_default()
-        )),
-        Ok(ok) => Ok(ok), // This basicly just converts from Result<T, io::Error> to an anyhow Result
-    }?;
-
-    let db = serde_json::from_str::<Vec<Task>>(&file_content)?;
-    let mut tasks = TaskList::new();
-    tasks.add_range(&db);
-
-    Ok(tasks)
 }
 
 fn interactive(tasks: &mut TaskList) -> anyhow::Result<()> {

@@ -13,7 +13,7 @@ impl<T: Semigroup> Monoid for Option<T> {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct Last<T>(pub Option<T>);
 
 impl<T> Default for Last<T> {
