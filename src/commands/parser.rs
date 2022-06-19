@@ -1,7 +1,7 @@
 use std::io;
 
-use clap::ArgMatches;
 use chrono::prelude::*;
+use clap::ArgMatches;
 
 use today::parser::program::{Parser, Program};
 
@@ -15,7 +15,9 @@ pub fn parse(command: &str, mut matches: ArgMatches) -> Option<Command> {
             let id = matches.remove_one::<String>("id").unwrap();
             Some(Command::Remove(id))
         }
-        "today" => Some(Command::Today),
+        "today" => Some(Command::Today {
+            detached: matches.remove_one("detached").unwrap_or(false),
+        }),
         "edit" => Some(Command::Edit { program: edit() }),
         _ => None,
     }

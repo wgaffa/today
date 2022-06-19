@@ -1,11 +1,10 @@
 #![feature(round_char_boundary)]
 
-use std::{
-    env,
-    path::PathBuf,
-};
+use std::{env, path::PathBuf};
 
 use clap::ArgMatches;
+use hotwatch::Hotwatch;
+
 use today::{
     combine,
     monoid::{Last, Monoid},
@@ -25,7 +24,6 @@ today::config!(
     AppPaths {
         config: Last<PathBuf> => PathBuf,
         data: Last<PathBuf> => PathBuf,
-        detached: Last<bool> => bool,
         command: Last<Command> => Command,
     }
 );
@@ -35,7 +33,6 @@ impl AppPaths<Build> {
         AppPaths {
             config: self.config.get().0.unwrap_or_default().into(),
             data: self.data.get().0.unwrap_or_default().into(),
-            detached: self.detached.get().0.unwrap_or_default().into(),
             command: self.command.get().0.unwrap_or_default().into(),
         }
     }
@@ -46,7 +43,6 @@ impl AppPaths<Run> {
         AppPaths {
             config: self.config.into(),
             data: self.data.into(),
-            detached: self.detached.into(),
             command: self.command.into(),
         }
     }
@@ -63,8 +59,8 @@ impl std::fmt::Display for AppPaths<Run> {
     }
 }
 
-today::semigroup_default!(AppPaths<Build>: config, data, detached, command);
-today::monoid_default!(AppPaths<Build>: config, data, detached, command);
+today::semigroup_default!(AppPaths<Build>: config, data, command);
+today::monoid_default!(AppPaths<Build>: config, data, command);
 
 macro_rules! convert_env {
     ($e:expr , $f:expr) => {
@@ -100,16 +96,10 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
 
 fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
     if let Some((subcommand, matches)) = args.remove_subcommand() {
-        let detached = matches
-            .try_contains_id("detached")
-            .unwrap_or_default()
-            .into();
-
         let command = commands::parser::parse(&subcommand, matches)
             .unwrap_or_default()
             .into();
         AppPaths {
-            detached,
             command,
             ..Default::default()
         }
@@ -133,8 +123,25 @@ fn main() -> anyhow::Result<()> {
     path.push("tasks.json");
     let json = today::json::JsonRepository::new(&path);
 
+    let (tx, rx) = std::sync::mpsc::channel();
+    let mut file_watch = Hotwatch::new().expect("Failed to initialize a notifier");
+    let detached_mode = if let Command::Today { detached: true, .. } = config.command.value() {
+        true
+    } else {
+        false
+    };
+
     let mut app = app::App::new(config, json);
+    if detached_mode {
+        let tx_file_changed = tx.clone();
+        file_watch.watch(path, move |_| {
+            let _ = tx_file_changed.send(());
+        })?;
+        app = app.with_event_file_changed(rx);
+    }
+
+    // let app_thread = thread::spawn(move || app.run());
+    // let _ = app_thread.join();
 
     app.run()
 }
-

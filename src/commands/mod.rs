@@ -14,7 +14,9 @@ pub enum Command {
     },
     List,
     Remove(String),
-    Today,
+    Today {
+        detached: bool,
+    },
     Edit {
         program: Vec<Program>,
     },

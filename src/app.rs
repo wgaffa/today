@@ -1,4 +1,10 @@
+use std::{
+    io::{stdout, Write},
+    sync::mpsc::Receiver,
+};
+
 use chrono::{prelude::*, TimeZone};
+use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 
 use today::{
     formatter::{self, Cell, Field, ListFormatter, TodayFormatter, Visibility},
@@ -18,6 +24,7 @@ use crate::{
 pub struct App {
     config: AppPaths<Run>,
     repo: Box<dyn Repository<Err = std::io::Error>>,
+    file_changed: Option<Receiver<()>>,
 }
 
 impl App {
@@ -28,17 +35,25 @@ impl App {
         Self {
             config,
             repo: Box::new(repo),
+            file_changed: None,
         }
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
         match self.config.command.take() {
             Command::List => self.list(),
-            Command::Today => self.today(),
+            Command::Today { .. } => self.today(),
             Command::Remove(x) => self.remove(&x),
             Command::Add { name, due } => self.add(name, due),
             Command::Edit { program } => self.edit(program),
             _ => self.interactive(),
+        }
+    }
+
+    pub fn with_event_file_changed(self, reciever: Receiver<()>) -> Self {
+        Self {
+            file_changed: Some(reciever),
+            ..self
         }
     }
 
@@ -86,6 +101,37 @@ impl App {
     }
 
     fn today(&self) -> anyhow::Result<()> {
+        if let Some(ref rx) = self.file_changed {
+            let mut stdout = stdout();
+
+            stdout.execute(cursor::Hide).unwrap();
+            loop {
+                stdout.queue(cursor::RestorePosition).unwrap();
+                stdout
+                    .queue(terminal::Clear(terminal::ClearType::FromCursorDown))
+                    .unwrap();
+
+                stdout.queue(cursor::SavePosition).unwrap();
+                let output = self.today_impl()?;
+                stdout.write_all(output.as_bytes()).unwrap();
+
+                stdout.queue(cursor::RestorePosition).unwrap();
+                stdout.flush().unwrap();
+
+                if let Err(_) = rx.recv() {
+                    break;
+                }
+            }
+
+            stdout.execute(cursor::Show).unwrap();
+        } else {
+            println!("{}", self.today_impl()?);
+        }
+
+        Ok(())
+    }
+
+    fn today_impl(&self) -> anyhow::Result<String> {
         let mut formatter = TodayFormatter::new();
         formatter.insert(
             Field::Id,
@@ -93,9 +139,7 @@ impl App {
         );
 
         let tasks = TaskList::from(self.repo.all()?);
-        println!("{}", commands::list(tasks.today(), &formatter));
-
-        Ok(())
+        Ok(commands::list(tasks.today(), &formatter))
     }
 
     fn remove(&self, id: &str) -> anyhow::Result<()> {
