@@ -2,7 +2,7 @@
 
 use std::{
     env,
-    io::{self, BufRead},
+    io,
     path::PathBuf,
 };
 
@@ -139,17 +139,20 @@ fn parse_command(command: &str, mut matches: ArgMatches) -> Option<Command> {
         }
         "today" => Some(Command::Today),
         "edit" => {
-            let mut vec = Vec::new();
-            #[allow(clippy::significant_drop_in_scrutinee)]
-            for line in io::stdin().lock().lines() {
-                let line = line.expect("Could not read line from stdin");
+            let edits = io::stdin().lines().map(|line| {
+                let line = line.unwrap();
                 let mut parser = Parser::new(&line);
-                match parser.parse() {
-                    Ok(program) => vec.push(program),
-                    Err(error) => eprintln!("Failed to parse: {}", error),
+                parser.parse()
+            })
+            .inspect(|result| {
+                if let Err(e) = result {
+                    eprintln!("Failed to parse: {e}");
                 }
-            }
-            Some(Command::Edit { program: vec })
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+
+            Some(Command::Edit { program: edits })
         }
         _ => None,
     }
