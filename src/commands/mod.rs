@@ -3,6 +3,8 @@ use itertools::Itertools;
 
 use today::{formatter::TaskFormatter, parser::program::Program, Task, TaskList};
 
+pub mod parser;
+
 #[non_exhaustive]
 #[derive(Debug, Default, Clone)]
 pub enum Command {

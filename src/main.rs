@@ -2,7 +2,6 @@
 
 use std::{
     env,
-    io,
     path::PathBuf,
 };
 
@@ -11,7 +10,7 @@ use today::{
     combine,
     monoid::{Last, Monoid},
     partial_config::{Build, Run, Select},
-    semigroup::Semigroup, parser::program::Parser,
+    semigroup::Semigroup,
 };
 
 mod app;
@@ -106,7 +105,7 @@ fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
             .unwrap_or_default()
             .into();
 
-        let command = parse_command(&subcommand, matches)
+        let command = commands::parser::parse(&subcommand, matches)
             .unwrap_or_default()
             .into();
         AppPaths {
@@ -116,45 +115,6 @@ fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
         }
     } else {
         Default::default()
-    }
-}
-
-fn parse_command(command: &str, mut matches: ArgMatches) -> Option<Command> {
-    match command {
-        "add" => {
-            let name = matches.try_remove_one("name").ok().flatten();
-            let now = matches.try_contains_id("now")
-                .ok()
-                .and_then(|_| None);
-            let due = matches.remove_one("due")
-                .and_then(|x| Some(x));
-
-            let due = now.or(due);
-            Some(Command::Add{ name, due })
-        }
-        "list" => Some(Command::List),
-        "remove" => {
-            let id = matches.remove_one::<String>("id").unwrap();
-            Some(Command::Remove(id))
-        }
-        "today" => Some(Command::Today),
-        "edit" => {
-            let edits = io::stdin().lines().map(|line| {
-                let line = line.unwrap();
-                let mut parser = Parser::new(&line);
-                parser.parse()
-            })
-            .inspect(|result| {
-                if let Err(e) = result {
-                    eprintln!("Failed to parse: {e}");
-                }
-            })
-            .flatten()
-            .collect::<Vec<_>>();
-
-            Some(Command::Edit { program: edits })
-        }
-        _ => None,
     }
 }
 
