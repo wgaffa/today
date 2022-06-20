@@ -34,7 +34,6 @@ impl Write for WatchMode {
 
         stdout.queue(cursor::SavePosition).unwrap();
         let res = stdout.write(buf);
-        stdout.queue(cursor::RestorePosition).unwrap();
 
         res
     }
