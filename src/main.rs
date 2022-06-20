@@ -3,7 +3,7 @@
 use std::{env, path::PathBuf, thread};
 
 use clap::ArgMatches;
-use crossterm::event::{read, Event, KeyEvent, KeyCode};
+use crossterm::event::{read, Event, KeyCode, KeyEvent, KeyModifiers};
 use hotwatch::Hotwatch;
 
 use today::{
@@ -154,11 +154,32 @@ fn main() -> anyhow::Result<()> {
             .with_event_quit(shutdown_rx)
             .with_writer(ui::writers::WatchMode::new());
 
+        let pid = nix::unistd::Pid::this();
         _input_thread = thread::spawn(move || {
             crossterm::terminal::enable_raw_mode().unwrap();
 
             loop {
-                if let Ok(Event::Key(KeyEvent{ code: KeyCode::Char('q'), ..})) = read() {
+                match read() {
+                    Ok(Event::Key(KeyEvent {
+                        code: KeyCode::Char('q'),
+                        ..
+                    })) => {
+                        let _ = shutdown_tx.send(());
+                        break;
+                    },
+                    Ok(Event::Key(KeyEvent {
+                        code: KeyCode::Char('c'),
+                        modifiers: KeyModifiers::CONTROL,
+                    })) => {
+                        let _ = nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGINT);
+                    },
+                    _ => {}
+                }
+                if let Ok(Event::Key(KeyEvent {
+                    code: KeyCode::Char('q'),
+                    ..
+                })) = read()
+                {
                     let _ = shutdown_tx.send(());
                     break;
                 }
