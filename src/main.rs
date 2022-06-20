@@ -99,7 +99,10 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
 
 fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
     if let Some((subcommand, matches)) = args.remove_subcommand() {
-        let watch_mode = matches.try_contains_id(cli::ARG_WATCH_MODE).unwrap_or_default().into();
+        let watch_mode = matches
+            .try_contains_id(cli::ARG_WATCH_MODE)
+            .unwrap_or_default()
+            .into();
         let command = commands::parser::parse(&subcommand, matches)
             .unwrap_or_default()
             .into();
@@ -129,16 +132,23 @@ fn main() -> anyhow::Result<()> {
     let json = today::json::JsonRepository::new(&path);
 
     let (tx, rx) = std::sync::mpsc::channel();
-    let mut file_watch = Hotwatch::new().expect("Failed to initialize a notifier");
     let watch_mode = config.watch_mode.get();
 
     let mut app = app::App::new(config, json).with_writer(std::io::stdout());
+
+    // file_watch is declared outside of the if block because it needs to live a long time.
+    // If declared inside the if block it will drop when the if block goes out of scope and
+    // any watches will also drop
+    let mut file_watch;
     if watch_mode {
+        file_watch = Hotwatch::new().expect("Failed to initialize a notifier");
         let tx_file_changed = tx.clone();
         file_watch.watch(path, move |_| {
             let _ = tx_file_changed.send(());
         })?;
-        app = app.with_event_file_changed(rx).with_writer(ui::writers::WatchMode::new());
+        app = app
+            .with_event_file_changed(rx)
+            .with_writer(ui::writers::WatchMode::new());
     }
 
     app.run()
