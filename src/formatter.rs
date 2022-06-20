@@ -1,6 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use termion::color;
+use crossterm::style::{Stylize, StyledContent};
 
 use crate::Task;
 
@@ -140,11 +140,9 @@ impl TaskFormatter for TodayFormatter {
         });
         let time = Cell::new(time);
         format!(
-            "{}{}{}{}: {}",
+            "{}{}: {}",
             id,
-            color::Fg(color::LightRed),
-            time,
-            color::Fg(color::Reset),
+            StyledContent::new(Default::default(), time).red(),
             name
         )
     }
