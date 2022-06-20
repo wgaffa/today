@@ -3,20 +3,23 @@ use clap::{command, Arg, ArgAction, ArgMatches, Command};
 
 use today::{Task, TaskList, TaskName};
 
+mod constants;
+pub use constants::*;
+
 pub fn options() -> ArgMatches {
     command!()
         .about("Manage tasks to do today")
         .args(&[
-            Arg::new("config")
+            Arg::new(ARG_CONFIG)
                 .long("config-only")
                 .action(ArgAction::SetTrue)
                 .help("Print only the configuration of this run but don't run it"),
         ])
-        .subcommand(Command::new("list").about("List all tasks"))
+        .subcommand(Command::new(ARG_COMMAND_LIST).about("List all tasks"))
         .subcommand(
-            Command::new("today")
+            Command::new(ARG_COMMAND_TODAY)
                 .arg(
-                    Arg::new("watch")
+                    Arg::new(ARG_WATCH_MODE)
                         .short('w')
                         .long("watch")
                         .action(ArgAction::SetTrue)
@@ -25,9 +28,9 @@ pub fn options() -> ArgMatches {
                 .about("List tasks that are due today"),
         )
         .subcommand(
-            Command::new("remove")
+            Command::new(ARG_COMMAND_REMOVE)
                 .arg(
-                    Arg::new("id")
+                    Arg::new(ARG_ID)
                         .required(true)
                         .value_name("ID")
                         .help("The id of the task to remove"),
@@ -35,14 +38,14 @@ pub fn options() -> ArgMatches {
                 .about("Removes a task"),
         )
         .subcommand(
-            Command::new("add")
+            Command::new(ARG_COMMAND_ADD)
                 .args(&[
-                    Arg::new("now")
+                    Arg::new(ARG_NOW)
                         .short('n')
                         .long("now")
-                        .conflicts_with("due")
+                        .conflicts_with(ARG_DUE)
                         .help("Set due to be done ASAP"),
-                    Arg::new("due")
+                    Arg::new(ARG_DUE)
                         .short('d')
                         .long("due")
                         .takes_value(true)
@@ -55,7 +58,7 @@ pub fn options() -> ArgMatches {
                                 .map(|x| Utc.from_local_datetime(&x).unwrap())
                         }))
                         .help("Set the due date in the format YYYY-MM-DD HH:MM"),
-                    Arg::new("name")
+                    Arg::new(ARG_NAME)
                         .required(false)
                         .value_name("NAME")
                         .validator(|x| {
@@ -69,7 +72,7 @@ pub fn options() -> ArgMatches {
                 ])
                 .about("Add a new task"),
         )
-        .subcommand(Command::new("edit").about("Edit one or more tasks"))
+        .subcommand(Command::new(ARG_COMMAND_EDIT).about("Edit one or more tasks"))
         .get_matches()
 }
 

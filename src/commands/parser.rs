@@ -6,13 +6,14 @@ use clap::ArgMatches;
 use today::parser::program::{Parser, Program};
 
 use super::Command;
+use crate::cli;
 
 pub fn parse(command: &str, mut matches: ArgMatches) -> Option<Command> {
     match command {
         "add" => Some(add(matches)),
         "list" => Some(Command::List),
         "remove" => {
-            let id = matches.remove_one::<String>("id").unwrap();
+            let id = matches.remove_one::<String>(cli::ARG_ID).unwrap();
             Some(Command::Remove(id))
         }
         "today" => Some(Command::Today),
@@ -39,9 +40,9 @@ fn edit() -> Vec<Program> {
 }
 
 fn add(mut matches: ArgMatches) -> Command {
-    let name = matches.remove_one("name");
-    let now = matches.contains_id("now").then_some(None);
-    let due = matches.remove_one::<DateTime<Utc>>("due").map(|x| Some(x));
+    let name = matches.remove_one(cli::ARG_NAME);
+    let now = matches.contains_id(cli::ARG_NOW).then_some(None);
+    let due = matches.remove_one::<DateTime<Utc>>(cli::ARG_DUE).map(|x| Some(x));
     let due = now.or(due);
     Command::Add { name, due }
 }

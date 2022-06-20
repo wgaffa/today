@@ -99,7 +99,7 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
 
 fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
     if let Some((subcommand, matches)) = args.remove_subcommand() {
-        let watch_mode = matches.try_contains_id("watch").unwrap_or_default().into();
+        let watch_mode = matches.try_contains_id(cli::ARG_WATCH_MODE).unwrap_or_default().into();
         let command = commands::parser::parse(&subcommand, matches)
             .unwrap_or_default()
             .into();
