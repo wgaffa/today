@@ -25,6 +25,7 @@ today::config!(
         config: Last<PathBuf> => PathBuf,
         data: Last<PathBuf> => PathBuf,
         command: Last<Command> => Command,
+        watch_mode: Last<bool> => bool,
     }
 );
 
@@ -34,6 +35,7 @@ impl AppPaths<Build> {
             config: self.config.get().0.unwrap_or_default().into(),
             data: self.data.get().0.unwrap_or_default().into(),
             command: self.command.get().0.unwrap_or_default().into(),
+            watch_mode: self.watch_mode.get().0.unwrap_or_default().into(),
         }
     }
 }
@@ -44,6 +46,7 @@ impl AppPaths<Run> {
             config: self.config.into(),
             data: self.data.into(),
             command: self.command.into(),
+            watch_mode: self.watch_mode.into(),
         }
     }
 }
@@ -59,8 +62,8 @@ impl std::fmt::Display for AppPaths<Run> {
     }
 }
 
-today::semigroup_default!(AppPaths<Build>: config, data, command);
-today::monoid_default!(AppPaths<Build>: config, data, command);
+today::semigroup_default!(AppPaths<Build>: config, data, command, watch_mode);
+today::monoid_default!(AppPaths<Build>: config, data, command, watch_mode);
 
 macro_rules! convert_env {
     ($e:expr , $f:expr) => {
@@ -96,11 +99,13 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
 
 fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
     if let Some((subcommand, matches)) = args.remove_subcommand() {
+        let watch_mode = matches.try_contains_id("watch").unwrap_or_default().into();
         let command = commands::parser::parse(&subcommand, matches)
             .unwrap_or_default()
             .into();
         AppPaths {
             command,
+            watch_mode,
             ..Default::default()
         }
     } else {
@@ -125,11 +130,7 @@ fn main() -> anyhow::Result<()> {
 
     let (tx, rx) = std::sync::mpsc::channel();
     let mut file_watch = Hotwatch::new().expect("Failed to initialize a notifier");
-    let watch_mode = if let Command::Today { watch_mode: x , .. } = config.command.value() {
-        *x
-    } else {
-        false
-    };
+    let watch_mode = config.watch_mode.get();
 
     let mut app = app::App::new(config, json).with_writer(std::io::stdout());
     if watch_mode {

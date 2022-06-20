@@ -14,9 +14,7 @@ pub enum Command {
     },
     List,
     Remove(String),
-    Today {
-        watch_mode: bool,
-    },
+    Today,
     Edit {
         program: Vec<Program>,
     },

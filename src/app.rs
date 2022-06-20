@@ -1,10 +1,9 @@
 use std::{
-    io::{stdout, Write},
+    io::Write,
     sync::mpsc::Receiver,
 };
 
 use chrono::{prelude::*, TimeZone};
-use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
 
 use today::{
     formatter::{self, Cell, Field, ListFormatter, TodayFormatter, Visibility},
@@ -44,7 +43,7 @@ impl App {
     pub fn run(&mut self) -> anyhow::Result<()> {
         match self.config.command.take() {
             Command::List => self.list(),
-            Command::Today { .. } => self.today(),
+            Command::Today => self.today(),
             Command::Remove(x) => self.remove(&x),
             Command::Add { name, due } => self.add(name, due),
             Command::Edit { program } => self.edit(program),
@@ -113,9 +112,6 @@ impl App {
 
     fn today(&mut self) -> anyhow::Result<()> {
         if let Some(ref rx) = self.file_changed {
-            let mut stdout = stdout();
-
-            stdout.execute(cursor::Hide).unwrap();
             loop {
                 let output = self.today_impl()?;
                 if let Some(ref mut writer) = self.writer {
@@ -127,8 +123,6 @@ impl App {
                     break;
                 }
             }
-
-            stdout.execute(cursor::Show).unwrap();
         } else {
             println!("{}", self.today_impl()?);
         }
