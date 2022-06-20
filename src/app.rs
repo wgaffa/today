@@ -1,5 +1,4 @@
 use std::{
-    io::Write,
     sync::mpsc::{Receiver, RecvTimeoutError},
     time::Duration,
 };
@@ -17,14 +16,14 @@ use today::{
 use crate::{
     cli,
     commands::{self, Command},
-    ui,
+    ui::{self, writers::OutputMode},
     AppPaths,
 };
 
 pub struct App {
     config: AppPaths<Run>,
     repo: Box<dyn Repository<Err = std::io::Error>>,
-    writer: Option<Box<dyn Write>>,
+    writer: Option<Box<dyn OutputMode>>,
 
     // Events
     file_changed: Option<Receiver<()>>,
@@ -70,7 +69,7 @@ impl App {
         }
     }
 
-    pub fn with_writer<W: Write + 'static>(self, writer: W) -> Self {
+    pub fn with_writer<W: OutputMode + 'static>(self, writer: W) -> Self {
         Self {
             writer: Some(Box::new(writer)),
             ..self
@@ -116,7 +115,7 @@ impl App {
         formatter.insert(Field::Time, default_cell);
 
         if let Some(ref mut writer) = self.writer {
-            writer.write_all(commands::list(&tasks, &formatter).as_bytes())?;
+            writer.write(&commands::list(&tasks, &formatter))?;
         }
 
         Ok(())
@@ -125,10 +124,10 @@ impl App {
     fn today(&mut self) -> anyhow::Result<()> {
         if let (Some(file_changed_rx), Some(shutdown_rx)) = (&self.file_changed, &self.quit) {
             loop {
-                let output = self.today_impl()?;
+                let output = self.today_impl()?.replace('\n', "\r\n");
+
                 if let Some(ref mut writer) = self.writer {
-                    writer.write_all(output.as_bytes())?;
-                    writer.flush()?;
+                    writer.write(&output)?;
                 }
 
                 if let Ok(()) = shutdown_rx.try_recv() {

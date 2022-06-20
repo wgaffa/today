@@ -1,15 +1,21 @@
 use std::io::{stdout, Write};
 
-use crossterm::{cursor, terminal, ExecutableCommand, QueueableCommand};
+use crossterm::{cursor, style, terminal, ExecutableCommand};
+
+pub trait OutputMode {
+    fn write(&mut self, buf: &str) -> std::io::Result<()>;
+}
 
 pub struct WatchMode {
-    first_call: bool,
+    pos: (u16, u16),
 }
 
 impl WatchMode {
     pub fn new() -> Self {
         stdout().execute(cursor::Hide).unwrap();
-        Self { first_call: true }
+        Self {
+            pos: cursor::position().expect("Could not read cursor position"),
+        }
     }
 }
 
@@ -19,26 +25,31 @@ impl Drop for WatchMode {
     }
 }
 
-impl Write for WatchMode {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+impl OutputMode for WatchMode {
+    fn write(&mut self, buf: &str) -> std::io::Result<()> {
         let mut stdout = stdout();
-        self.first_call
-            .then(|| self.first_call = false)
-            .or_else(|| {
-                stdout.queue(cursor::RestorePosition).unwrap();
-                stdout
-                    .queue(terminal::Clear(terminal::ClearType::FromCursorDown))
-                    .unwrap();
-                Some(())
-            });
 
-        stdout.queue(cursor::SavePosition).unwrap();
-        let res = stdout.write(buf);
+        let lines_count = buf.lines().count() as u16;
+        let (_, row_size) = terminal::size().expect("Could not get terminal size");
 
-        res
+        // clamp to the bottom of the screen
+        if self.pos.1 + lines_count > row_size {
+            self.pos.1 = row_size.saturating_sub(lines_count).saturating_sub(1);
+        }
+
+        crossterm::queue! {
+            stdout,
+            cursor::MoveTo(self.pos.0, self.pos.1),
+            terminal::Clear(terminal::ClearType::FromCursorDown),
+            style::Print(buf),
+        }?;
+
+        stdout.flush()
     }
+}
 
-    fn flush(&mut self) -> std::io::Result<()> {
-        stdout().flush()
+impl OutputMode for std::io::Stdout {
+    fn write(&mut self, buf: &str) -> std::io::Result<()> {
+        write!(self, "{}", buf)
     }
 }
