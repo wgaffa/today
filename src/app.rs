@@ -25,6 +25,7 @@ pub struct App {
     config: AppPaths<Run>,
     repo: Box<dyn Repository<Err = std::io::Error>>,
     file_changed: Option<Receiver<()>>,
+    writer: Option<Box<dyn Write>>,
 }
 
 impl App {
@@ -36,6 +37,7 @@ impl App {
             config,
             repo: Box::new(repo),
             file_changed: None,
+            writer: None,
         }
     }
 
@@ -53,6 +55,13 @@ impl App {
     pub fn with_event_file_changed(self, reciever: Receiver<()>) -> Self {
         Self {
             file_changed: Some(reciever),
+            ..self
+        }
+    }
+
+    pub fn with_writer<W: Write + 'static>(self, writer: W) -> Self {
+        Self {
+            writer: Some(Box::new(writer)),
             ..self
         }
     }
@@ -80,7 +89,7 @@ impl App {
         Ok(self.repo.save(tasks)?)
     }
 
-    fn list(&self) -> anyhow::Result<()> {
+    fn list(&mut self) -> anyhow::Result<()> {
         let tasks = TaskList::from(self.repo.all()?);
         let shortest_id = commands::shortest_id_length(&tasks).max(5);
         let mut formatter = ListFormatter::new();
@@ -95,28 +104,24 @@ impl App {
         formatter.insert(Field::Name, default_cell.clone().with_margin((0, 0)));
         formatter.insert(Field::Time, default_cell);
 
-        println!("{}", commands::list(&tasks, &formatter));
+        if let Some(ref mut writer) = self.writer {
+            writer.write_all(commands::list(&tasks, &formatter).as_bytes())?;
+        }
 
         Ok(())
     }
 
-    fn today(&self) -> anyhow::Result<()> {
+    fn today(&mut self) -> anyhow::Result<()> {
         if let Some(ref rx) = self.file_changed {
             let mut stdout = stdout();
 
             stdout.execute(cursor::Hide).unwrap();
             loop {
-                stdout.queue(cursor::RestorePosition).unwrap();
-                stdout
-                    .queue(terminal::Clear(terminal::ClearType::FromCursorDown))
-                    .unwrap();
-
-                stdout.queue(cursor::SavePosition).unwrap();
                 let output = self.today_impl()?;
-                stdout.write_all(output.as_bytes()).unwrap();
-
-                stdout.queue(cursor::RestorePosition).unwrap();
-                stdout.flush().unwrap();
+                if let Some(ref mut writer) = self.writer {
+                    writer.write_all(output.as_bytes())?;
+                    writer.flush()?;
+                }
 
                 if let Err(_) = rx.recv() {
                     break;

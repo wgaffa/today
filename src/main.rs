@@ -131,17 +131,14 @@ fn main() -> anyhow::Result<()> {
         false
     };
 
-    let mut app = app::App::new(config, json);
+    let mut app = app::App::new(config, json).with_writer(std::io::stdout());
     if detached_mode {
         let tx_file_changed = tx.clone();
         file_watch.watch(path, move |_| {
             let _ = tx_file_changed.send(());
         })?;
-        app = app.with_event_file_changed(rx);
+        app = app.with_event_file_changed(rx).with_writer(ui::writers::WatchMode::new());
     }
-
-    // let app_thread = thread::spawn(move || app.run());
-    // let _ = app_thread.join();
 
     app.run()
 }

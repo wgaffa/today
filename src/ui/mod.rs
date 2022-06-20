@@ -14,6 +14,8 @@ use std::fmt::Display;
 
 use today::{Task, TaskName};
 
+pub mod writers;
+
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq, Hash)]
 pub enum MenuOption {
