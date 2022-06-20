@@ -77,7 +77,7 @@ impl App {
                 .clone()
                 .with_size(formatter::Size::Max(shortest_id)),
         );
-        formatter.insert(Field::Name, default_cell.clone());
+        formatter.insert(Field::Name, default_cell.clone().with_margin((0, 0)));
         formatter.insert(Field::Time, default_cell);
 
         println!("{}", commands::list(&tasks, &formatter));
