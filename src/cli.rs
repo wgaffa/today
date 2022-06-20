@@ -16,11 +16,11 @@ pub fn options() -> ArgMatches {
         .subcommand(
             Command::new("today")
                 .arg(
-                    Arg::new("detached")
-                        .short('d')
-                        .long("detached")
+                    Arg::new("watch")
+                        .short('w')
+                        .long("watch")
                         .action(ArgAction::SetTrue)
-                        .help("Run in detached mode"),
+                        .help("Run in watch mode"),
                 )
                 .about("List tasks that are due today"),
         )

@@ -16,7 +16,7 @@ pub fn parse(command: &str, mut matches: ArgMatches) -> Option<Command> {
             Some(Command::Remove(id))
         }
         "today" => Some(Command::Today {
-            detached: matches.remove_one("detached").unwrap_or(false),
+            watch_mode: matches.remove_one("watch").unwrap_or(false),
         }),
         "edit" => Some(Command::Edit { program: edit() }),
         _ => None,

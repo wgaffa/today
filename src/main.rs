@@ -125,14 +125,14 @@ fn main() -> anyhow::Result<()> {
 
     let (tx, rx) = std::sync::mpsc::channel();
     let mut file_watch = Hotwatch::new().expect("Failed to initialize a notifier");
-    let detached_mode = if let Command::Today { detached: true, .. } = config.command.value() {
-        true
+    let watch_mode = if let Command::Today { watch_mode: x , .. } = config.command.value() {
+        *x
     } else {
         false
     };
 
     let mut app = app::App::new(config, json).with_writer(std::io::stdout());
-    if detached_mode {
+    if watch_mode {
         let tx_file_changed = tx.clone();
         file_watch.watch(path, move |_| {
             let _ = tx_file_changed.send(());
