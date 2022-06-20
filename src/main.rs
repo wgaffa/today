@@ -1,8 +1,9 @@
 #![feature(round_char_boundary)]
 
-use std::{env, path::PathBuf};
+use std::{env, path::PathBuf, thread};
 
 use clap::ArgMatches;
+use crossterm::event::{read, Event, KeyEvent, KeyCode};
 use hotwatch::Hotwatch;
 
 use today::{
@@ -132,6 +133,7 @@ fn main() -> anyhow::Result<()> {
     let json = today::json::JsonRepository::new(&path);
 
     let (tx, rx) = std::sync::mpsc::channel();
+    let (shutdown_tx, shutdown_rx) = std::sync::mpsc::channel();
     let watch_mode = config.watch_mode.get();
 
     let mut app = app::App::new(config, json).with_writer(std::io::stdout());
@@ -140,6 +142,7 @@ fn main() -> anyhow::Result<()> {
     // If declared inside the if block it will drop when the if block goes out of scope and
     // any watches will also drop
     let mut file_watch;
+    let _input_thread;
     if watch_mode {
         file_watch = Hotwatch::new().expect("Failed to initialize a notifier");
         let tx_file_changed = tx.clone();
@@ -148,7 +151,21 @@ fn main() -> anyhow::Result<()> {
         })?;
         app = app
             .with_event_file_changed(rx)
+            .with_event_quit(shutdown_rx)
             .with_writer(ui::writers::WatchMode::new());
+
+        _input_thread = thread::spawn(move || {
+            crossterm::terminal::enable_raw_mode().unwrap();
+
+            loop {
+                if let Ok(Event::Key(KeyEvent{ code: KeyCode::Char('q'), ..})) = read() {
+                    let _ = shutdown_tx.send(());
+                    break;
+                }
+            }
+
+            crossterm::terminal::disable_raw_mode().unwrap();
+        })
     }
 
     app.run()

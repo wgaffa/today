@@ -1,6 +1,7 @@
 use std::{
     io::Write,
-    sync::mpsc::Receiver,
+    sync::mpsc::{Receiver, RecvTimeoutError},
+    time::Duration,
 };
 
 use chrono::{prelude::*, TimeZone};
@@ -23,8 +24,11 @@ use crate::{
 pub struct App {
     config: AppPaths<Run>,
     repo: Box<dyn Repository<Err = std::io::Error>>,
-    file_changed: Option<Receiver<()>>,
     writer: Option<Box<dyn Write>>,
+
+    // Events
+    file_changed: Option<Receiver<()>>,
+    quit: Option<Receiver<()>>,
 }
 
 impl App {
@@ -37,6 +41,7 @@ impl App {
             repo: Box::new(repo),
             file_changed: None,
             writer: None,
+            quit: None,
         }
     }
 
@@ -54,6 +59,13 @@ impl App {
     pub fn with_event_file_changed(self, reciever: Receiver<()>) -> Self {
         Self {
             file_changed: Some(reciever),
+            ..self
+        }
+    }
+
+    pub fn with_event_quit(self, receiver: Receiver<()>) -> Self {
+        Self {
+            quit: Some(receiver),
             ..self
         }
     }
@@ -111,7 +123,7 @@ impl App {
     }
 
     fn today(&mut self) -> anyhow::Result<()> {
-        if let Some(ref rx) = self.file_changed {
+        if let (Some(file_changed_rx), Some(shutdown_rx)) = (&self.file_changed, &self.quit) {
             loop {
                 let output = self.today_impl()?;
                 if let Some(ref mut writer) = self.writer {
@@ -119,7 +131,13 @@ impl App {
                     writer.flush()?;
                 }
 
-                if let Err(_) = rx.recv() {
+                if let Ok(()) = shutdown_rx.try_recv() {
+                    break;
+                }
+
+                if let Err(RecvTimeoutError::Disconnected) =
+                    file_changed_rx.recv_timeout(Duration::from_millis(300))
+                {
                     break;
                 }
             }
