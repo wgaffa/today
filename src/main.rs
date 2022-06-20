@@ -104,6 +104,7 @@ fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
             .try_contains_id(cli::ARG_WATCH_MODE)
             .unwrap_or_default()
             .into();
+
         let command = commands::parser::parse(&subcommand, matches)
             .unwrap_or_default()
             .into();

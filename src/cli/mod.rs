@@ -22,7 +22,6 @@ pub fn options() -> ArgMatches {
                     Arg::new(ARG_WATCH_MODE)
                         .short('w')
                         .long("watch")
-                        .action(ArgAction::SetTrue)
                         .help("Run in watch mode"),
                 )
                 .about("List tasks that are due today"),
