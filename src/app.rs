@@ -97,9 +97,8 @@ impl App {
         Ok(())
     }
 
-    fn add(&self, name: Option<String>, due: Option<Option<DateTime<Utc>>>) -> anyhow::Result<()> {
+    fn add(&self, name: Option<TaskName>, due: Option<Option<DateTime<Utc>>>) -> anyhow::Result<()> {
         let name = name
-            .and_then(|x| TaskName::new(&x))
             .or_else(|| TaskName::new(&ui::prompt_name().ok()?))
             .expect("Could not parse or get a correct taskname from user");
 

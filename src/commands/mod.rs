@@ -1,7 +1,7 @@
 use chrono::prelude::*;
 use itertools::Itertools;
 
-use today::{formatter::TaskFormatter, parser::program::Program, Task, TaskList};
+use today::{formatter::TaskFormatter, parser::program::Program, Task, TaskList, TaskName};
 
 pub mod parser;
 
@@ -9,7 +9,7 @@ pub mod parser;
 #[derive(Debug, Default, Clone)]
 pub enum Command {
     Add {
-        name: Option<String>,
+        name: Option<TaskName>,
         due: Option<Option<DateTime<Utc>>>,
     },
     List,

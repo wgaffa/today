@@ -59,13 +59,13 @@ pub fn options() -> ArgMatches {
                     Arg::new(ARG_NAME)
                         .required(false)
                         .value_name("NAME")
-                        .validator(|x| {
+                        .value_parser(clap::builder::ValueParser::new(|x: &str| {
                             TaskName::new(x).ok_or_else(|| {
                                 anyhow::anyhow!(
                                     "A task name must have atleast one printable character"
                                 )
                             })
-                        })
+                        }))
                         .help("The task name to be done at the specified due date"),
                 ])
                 .about("Add a new task"),
