@@ -27,6 +27,7 @@ today::config!(
         data: Last<PathBuf> => PathBuf,
         command: Last<Command> => Command,
         watch_mode: Last<bool> => bool,
+        config_only: Option<bool> => bool,
     }
 );
 
@@ -37,6 +38,7 @@ impl AppPaths<Build> {
             data: self.data.get().0.unwrap_or_default().into(),
             command: self.command.get().0.unwrap_or_default().into(),
             watch_mode: self.watch_mode.get().0.unwrap_or_default().into(),
+            config_only: self.config_only.get().unwrap_or_default().into(),
         }
     }
 }
@@ -48,6 +50,7 @@ impl AppPaths<Run> {
             data: self.data.into(),
             command: self.command.into(),
             watch_mode: self.watch_mode.into(),
+            config_only: self.config_only.into(),
         }
     }
 }
@@ -63,8 +66,8 @@ impl std::fmt::Display for AppPaths<Run> {
     }
 }
 
-today::semigroup_default!(AppPaths<Build>: config, data, command, watch_mode);
-today::monoid_default!(AppPaths<Build>: config, data, command, watch_mode);
+today::semigroup_default!(AppPaths<Build>: config, data, command, watch_mode, config_only);
+today::monoid_default!(AppPaths<Build>: config, data, command, watch_mode, config_only);
 
 macro_rules! convert_env {
     ($e:expr , $f:expr) => {
@@ -99,6 +102,7 @@ fn read_xdg() -> anyhow::Result<AppPaths<Build>> {
 }
 
 fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
+    let config_only = args.contains_id(cli::ARG_CONFIG).into();
     if let Some((subcommand, matches)) = args.remove_subcommand() {
         let watch_mode = matches
             .try_contains_id(cli::ARG_WATCH_MODE)
@@ -111,10 +115,14 @@ fn read_args(mut args: ArgMatches) -> AppPaths<Build> {
         AppPaths {
             command,
             watch_mode,
+            config_only,
             ..Default::default()
         }
     } else {
-        Default::default()
+        AppPaths {
+            config_only,
+            ..Default::default()
+        }
     }
 }
 
@@ -136,6 +144,7 @@ fn main() -> anyhow::Result<()> {
     let (tx, rx) = std::sync::mpsc::channel();
     let (shutdown_tx, shutdown_rx) = std::sync::mpsc::channel();
     let watch_mode = config.watch_mode.get();
+    let config_only = config.config_only.get();
 
     let mut app = app::App::new(config, json).with_writer(std::io::stdout());
 
@@ -144,7 +153,7 @@ fn main() -> anyhow::Result<()> {
     // any watches will also drop
     let mut file_watch;
     let _input_thread;
-    if watch_mode {
+    if watch_mode && !config_only {
         file_watch = Hotwatch::new().expect("Failed to initialize a notifier");
         let tx_file_changed = tx.clone();
         file_watch.watch(path, move |_| {
@@ -167,13 +176,13 @@ fn main() -> anyhow::Result<()> {
                     })) => {
                         let _ = shutdown_tx.send(());
                         break;
-                    },
+                    }
                     Ok(Event::Key(KeyEvent {
                         code: KeyCode::Char('c'),
                         modifiers: KeyModifiers::CONTROL,
                     })) => {
                         let _ = nix::sys::signal::kill(pid, nix::sys::signal::Signal::SIGINT);
-                    },
+                    }
                     _ => {}
                 }
                 if let Ok(Event::Key(KeyEvent {
@@ -187,7 +196,7 @@ fn main() -> anyhow::Result<()> {
             }
 
             crossterm::terminal::disable_raw_mode().unwrap();
-        })
+        });
     }
 
     app.run()

@@ -45,6 +45,10 @@ impl App {
     }
 
     pub fn run(&mut self) -> anyhow::Result<()> {
+        if self.config.config_only.get() {
+            return self.config_only();
+        }
+
         match self.config.command.take() {
             Command::List => self.list(),
             Command::Today => self.today(),
@@ -74,6 +78,23 @@ impl App {
             writer: Some(Box::new(writer)),
             ..self
         }
+    }
+
+    fn config_only(&mut self) -> anyhow::Result<()> {
+        if let Some(ref mut writer) = self.writer {
+            let output = vec![
+                format!("config path: {}", self.config.config.value().to_string_lossy()),
+                format!("data path: {}", self.config.data.value().to_string_lossy()),
+                format!("watch mode: {:?}", self.config.watch_mode.value()),
+                format!("config only: {:?}", self.config.config_only.value()),
+                format!("command: {:#?}", self.config.command.value())
+                ];
+
+            let output = output.join("\r\n");
+            writer.write(&output)?;
+        }
+
+        Ok(())
     }
 
     fn add(&self, name: Option<String>, due: Option<Option<DateTime<Utc>>>) -> anyhow::Result<()> {

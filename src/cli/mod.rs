@@ -1,5 +1,5 @@
 use chrono::prelude::*;
-use clap::{command, Arg, ArgAction, ArgMatches, Command};
+use clap::{command, Arg, ArgMatches, Command};
 
 use today::{Task, TaskList, TaskName};
 
@@ -12,7 +12,6 @@ pub fn options() -> ArgMatches {
         .args(&[
             Arg::new(ARG_CONFIG)
                 .long("config-only")
-                .action(ArgAction::SetTrue)
                 .help("Print only the configuration of this run but don't run it"),
         ])
         .subcommand(Command::new(ARG_COMMAND_LIST).about("List all tasks"))

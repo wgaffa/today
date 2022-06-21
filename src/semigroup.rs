@@ -38,6 +38,12 @@ impl_semigroup_with_addition!(
     usize, isize, u8, i8, u16, i16, u32, i32, u64, i64, u128, i128, f32, f64
 );
 
+impl Semigroup for bool {
+    fn combine(self, rhs: Self) -> Self {
+        self || rhs
+    }
+}
+
 impl<T> Semigroup for PhantomData<T> {
     fn combine(self, _rhs: Self) -> Self {
         self
