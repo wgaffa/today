@@ -42,7 +42,9 @@ fn edit() -> Vec<Program> {
 fn add(mut matches: ArgMatches) -> Command {
     let name = matches.remove_one(cli::ARG_NAME);
     let now = matches.contains_id(cli::ARG_NOW).then_some(None);
-    let due = matches.remove_one::<DateTime<Utc>>(cli::ARG_DUE).map(|x| Some(x));
+    let due = matches
+        .remove_one::<DateTime<Utc>>(cli::ARG_DUE)
+        .map(|x| Some(x));
     let due = now.or(due);
     Command::Add { name, due }
 }

@@ -83,12 +83,15 @@ impl App {
     fn config_only(&mut self) -> anyhow::Result<()> {
         if let Some(ref mut writer) = self.writer {
             let output = vec![
-                format!("config path: {}", self.config.config.value().to_string_lossy()),
+                format!(
+                    "config path: {}",
+                    self.config.config.value().to_string_lossy()
+                ),
                 format!("data path: {}", self.config.data.value().to_string_lossy()),
                 format!("watch mode: {:?}", self.config.watch_mode.value()),
                 format!("config only: {:?}", self.config.config_only.value()),
-                format!("command: {:#?}", self.config.command.value())
-                ];
+                format!("command: {:#?}", self.config.command.value()),
+            ];
 
             let output = output.join("\r\n");
             writer.write(&output)?;
@@ -97,7 +100,11 @@ impl App {
         Ok(())
     }
 
-    fn add(&self, name: Option<TaskName>, due: Option<Option<DateTime<Utc>>>) -> anyhow::Result<()> {
+    fn add(
+        &self,
+        name: Option<TaskName>,
+        due: Option<Option<DateTime<Utc>>>,
+    ) -> anyhow::Result<()> {
         let name = name
             .or_else(|| TaskName::new(&ui::prompt_name().ok()?))
             .expect("Could not parse or get a correct taskname from user");

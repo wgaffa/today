@@ -9,11 +9,9 @@ pub use constants::*;
 pub fn options() -> ArgMatches {
     command!()
         .about("Manage tasks to do today")
-        .args(&[
-            Arg::new(ARG_CONFIG)
-                .long("config-only")
-                .help("Print only the configuration of this run but don't run it"),
-        ])
+        .args(&[Arg::new(ARG_CONFIG)
+            .long("config-only")
+            .help("Print only the configuration of this run but don't run it")])
         .subcommand(Command::new(ARG_COMMAND_LIST).about("List all tasks"))
         .subcommand(
             Command::new(ARG_COMMAND_TODAY)
@@ -49,10 +47,8 @@ pub fn options() -> ArgMatches {
                         .takes_value(true)
                         .value_parser(clap::builder::ValueParser::new(|x: &str| {
                             NaiveDateTime::parse_from_str(x, "%Y-%m-%d %H:%M")
-                                .or(
-                                    NaiveDate::parse_from_str(x, "%Y-%m-%d")
-                                        .map(|x| x.and_hms(0, 0, 0))
-                                )
+                                .or(NaiveDate::parse_from_str(x, "%Y-%m-%d")
+                                    .map(|x| x.and_hms(0, 0, 0)))
                                 .map(|x| Utc.from_local_datetime(&x).unwrap())
                         }))
                         .help("Set the due date in the format YYYY-MM-DD HH:MM"),

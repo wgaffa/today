@@ -272,7 +272,8 @@ impl<'a> Parser<'a> {
             .map_err(|_| self.create_error(TokenError::InvalidDue))?;
         self.position += index;
 
-        NaiveDate::from_ymd_opt(year, month, day).ok_or_else(|| self.create_error(TokenError::InvalidDue))
+        NaiveDate::from_ymd_opt(year, month, day)
+            .ok_or_else(|| self.create_error(TokenError::InvalidDue))
     }
 
     fn time(&mut self) -> Result<NaiveTime, ParseError> {
@@ -301,7 +302,8 @@ impl<'a> Parser<'a> {
                     .map_err(|_| self.create_error(TokenError::InvalidDue))
             })?;
 
-        NaiveTime::from_hms_opt(hour, minute, 0).ok_or_else(|| self.create_error(TokenError::InvalidDue))
+        NaiveTime::from_hms_opt(hour, minute, 0)
+            .ok_or_else(|| self.create_error(TokenError::InvalidDue))
     }
 
     fn name(&mut self) -> Result<TaskName, ParseError> {

@@ -1,6 +1,6 @@
 use std::collections::{hash_map::Entry, HashMap};
 
-use crossterm::style::{Stylize, StyledContent};
+use crossterm::style::{StyledContent, Stylize};
 
 use crate::Task;
 

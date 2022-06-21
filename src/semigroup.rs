@@ -68,8 +68,8 @@ macro_rules! semigroup_default {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use test_case::test_case;
     use crate::monoid::{Last, Sum};
+    use test_case::test_case;
 
     #[test_case(Some(5), Some(7) => Some(12))]
     #[test_case(Some(5), None => Some(5))]

@@ -11,5 +11,5 @@ pub use task::*;
 pub mod formatter;
 pub mod parser;
 
-pub mod repository;
 pub mod json;
+pub mod repository;

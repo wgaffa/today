@@ -2,7 +2,7 @@ use anyhow::Error;
 use chrono::prelude::*;
 use inquire::{
     error::{InquireError, InquireResult},
-    formatter::{StringFormatter, OptionFormatter},
+    formatter::{OptionFormatter, StringFormatter},
     ui::{RenderConfig, Styled},
     validator::StringValidator,
     CustomType,

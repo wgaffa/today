@@ -29,7 +29,8 @@ impl crate::repository::Repository for JsonRepository {
 
     fn save(&self, tasks: TaskList) -> Result<(), Self::Err> {
         let json = serde_json::to_string(&tasks.as_slice())?;
-        let directory = self.path
+        let directory = self
+            .path
             .parent()
             .expect("Expected a directory for the file");
 
